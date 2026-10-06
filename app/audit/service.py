@@ -39,6 +39,8 @@ register_events(
     "office.revoked",
     "vendor.created",
     "vendor.updated",
+    "vendor.beneficiary_created",
+    "vendor.update_failed",
     "evidence.uploaded",
     "signature.challenged",
     "requisition.created",

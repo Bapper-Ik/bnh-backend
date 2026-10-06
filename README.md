@@ -65,3 +65,7 @@ Migration 0006 adds recovery tokens after the already-applied 0004/0005 history.
 ## Record scope and reviewers
 
 Run the delivered scope APIs with `uv run uvicorn app.access_app:create_app --factory --host 127.0.0.1 --port 8000` after migration 0008. The organisation API may explicitly grant entity review access to a different individual through `/api/v1/access/review-grants`. Review accounts are read-only and cannot simultaneously hold an active financial office. Capability and attachment metadata endpoints reveal no storage credentials, public file URLs, or bank details. Upload/download and complete business transitions retain their own feature gates.
+
+## Vendor records
+
+`uv run uvicorn app.vendor_app:create_app --factory --host 127.0.0.1 --port 8000` adds vendor capture/lookup/version APIs after migration 0009. Vendor creators maintain their own records within active entity membership; a separately authorised maintainer requires vendor:update and vendor:read_sensitive. These fixed grants are not implied by technical administration and are not exposed through a general public permission editor. Bank data is excluded from lookup lists, and every historical version is append-only. No actual vendors or bank details are seeded from the supplied screenshots.

@@ -1,3 +1,5 @@
+> **2026-10-06 scope update:** The owner limits this release to the 14 reusable screens in [ui_scrrens.md](ui_scrrens.md) and the backend functionality required by them. Older sections below supply supporting rules, not permission to add screens or unrelated modules. Backend implementation statuses are not screen-completion claims. Screens 1–3 map to IAM-001 and web access; 4–8 to requisition/authority and web journeys; 9 to Board/evidence; 10 to VEN-001; 11–12 to IAM/ORG; 13 to audit; 14 to identity/session controls. Notifications are a header drawer and evidence/documents a viewer. Each connected journey retains the test, commit and push gate on dev.
+
 # Custodian by Brendan — Platform Feature Specification
 
 > **Engineering-convention update — 2026-10-06:** The project owner has replaced
@@ -787,11 +789,11 @@ Let an authorised requester select an existing vendor or capture the details nee
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Reusable entity-scoped vendors, paginated safe summaries, contact/beneficiary history, all-or-none bank validation, immutable version storage, current-version concurrency and unchanged submitted snapshots implemented. Screen 10 adds scoped search and add/detail/edit drawers with server capabilities, redaction and conflict handling. Full backend 144 tests, isolated staged backend 75 tests, staged frontend 3 unit tests and 1 real-backend browser journey pass; lint, formatting, types and production build pass. Desktop/mobile screenshots inspected. No Render deployment or staff acceptance is claimed.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** No implementation blocker. Request-form lookup integration is WEB-002; creation of a vendor is not beneficiary verification.
 
 ### Requirement Basis
 
@@ -833,7 +835,7 @@ Proposed resources: GET/POST /vendors, GET/PATCH /vendors/{uuid}, restricted ben
 
 ### Delivery Surface
 
-Vendor APIs and snapshot contract with tests; requester-facing lookup/edit components are integrated under WEB-002.
+Screen 10 Vendors and its supporting APIs, including search, add/detail/edit drawers, scoped bank access and version conflict handling. Request-form lookup is integrated separately within screen 6 (WEB-002).
 
 ### Success Outcome
 
@@ -848,11 +850,11 @@ Staff can capture or reuse vendor information without sacrificing the historical
 
 ### Acceptance Criteria
 
-- [ ] Lookup results omit unauthorised bank details.
-- [ ] Partial bank triples fail or remain explicitly absent according to the agreed schema; no fabricated values.
-- [ ] Leading zeroes survive save/reload.
-- [ ] Changing a vendor record does not change an already stored test submission snapshot.
-- [ ] Duplicate-name vendors are not automatically treated as one counterparty.
+- [x] Lookup results omit unauthorised bank details.
+- [x] Partial bank triples fail or remain explicitly absent according to the agreed schema; no fabricated values.
+- [x] Leading zeroes survive save/reload.
+- [x] Changing a vendor record does not change an already stored test submission snapshot.
+- [x] Duplicate-name vendors are not automatically treated as one counterparty.
 
 ---
 

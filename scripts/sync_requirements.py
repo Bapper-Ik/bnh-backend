@@ -10,14 +10,15 @@ for repo in ("bnh-backend", "bnh-ui"):
     dest = root / repo / "docs" / "reference"
     dest.mkdir(parents=True, exist_ok=True)
     rows = []
-    for name in ("implementation_pan.md", "features.md", "recap.md"):
+    for name in ("implementation_pan.md", "features.md", "recap.md", "ui_scrrens.md"):
         source = sources / name
         shutil.copyfile(source, dest / name)
         rows.append(f"- {name}: {hashlib.sha256(source.read_bytes()).hexdigest()}")
     (dest / "README.md").write_text(
         "# Product reference snapshots\n\n"
         "Generated from the shared workspace docs. Do not maintain a second tracker here. "
-        "The shared docs/implementation_pan.md is canonical while working in the paired workspace. "
+        "The shared docs/ui_scrrens.md limits release scope to fourteen screens; "
+        "docs/implementation_pan.md remains the canonical progress tracker. "
         "For a standalone clone, these snapshots preserve the agreed product requirements; "
         "bring both repositories and shared docs together before synchronising progress. "
         "Personal-data screenshots are intentionally not copied into Git.\n\n"
