@@ -81,6 +81,7 @@ async def current_actor(
             raise DomainError(
                 "ACCESS_DENIED", "Your session could not verify this action. Reload and retry.", 403
             )
+    request.state.actor_id = identity.id
     return Actor(account, identity, auth)
 
 

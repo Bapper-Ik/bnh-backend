@@ -31,6 +31,8 @@ register_events(
     "auth.sessions_revoked",
     "auth.failed",
     "organisation.created",
+    "organisation.updated",
+    "office.assignment_failed",
     "office.assigned",
     "office.revoked",
     "vendor.created",

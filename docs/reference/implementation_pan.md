@@ -593,11 +593,11 @@ Provide the smallest complete organisational directory needed to identify the re
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Directory metadata and active state, controlled memberships/transfers, account deactivation with session revocation, effective-dated offices, same-person Board separation, exclusive assignment scope locks, and retained historical references implemented. Sixteen organisation tests and the full backend suite (125 tests) pass. Isolated staged checkout also passed all 56 tests plus Ruff, formatting, and mypy.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** No implementation blocker. Actual BNH entities, memberships and officeholders must be supplied by authorised operators; no production fixtures are seeded.
 
 ### Requirement Basis
 
@@ -657,11 +657,11 @@ Every eligible request can be resolved to a unique authorised person or an expli
 
 ### Acceptance Criteria
 
-- [ ] Two departments with different HODs resolve correctly.
-- [ ] Overlapping appointments, invalid entity/department links, and same-person Board-role conflicts are detected.
-- [ ] A staff profile PATCH cannot change its own office, role, or routing authority.
-- [ ] A deactivated officeholder cannot use an old session to sign a pending request.
-- [ ] Historical requests continue to show the appointments and department present at submission.
+- [x] Two departments with different HODs resolve correctly.
+- [x] Overlapping appointments, invalid entity/department links, and same-person Board-role conflicts are detected.
+- [x] A staff profile PATCH cannot change its own office, role, or routing authority.
+- [x] A deactivated officeholder cannot use an old session to sign a pending request.
+- [x] Historical requests continue to show the appointments and department present at submission.
 
 ---
 

@@ -14,6 +14,19 @@ class DomainError(Exception):
 def install_errors(app: FastAPI) -> None:
     @app.exception_handler(DomainError)
     async def domain_error(request: Request, exc: DomainError) -> JSONResponse:
+        recorder = getattr(request.app.state, "record_rejected_action", None)
+        if recorder:
+            try:
+                await recorder(request)
+            except SQLAlchemyError:
+                return JSONResponse(
+                    status_code=503,
+                    content={
+                        "code": "PERSISTENCE_FAILURE",
+                        "message": "The rejected action could not be recorded. Please retry.",
+                        "request_id": getattr(request.state, "request_id", str(uuid4())),
+                    },
+                )
         return JSONResponse(
             status_code=exc.status,
             content={

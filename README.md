@@ -57,3 +57,7 @@ Run the delivered authentication API with `uv run uvicorn app.auth_app:create_ap
 Recovery uses a controlled operator handoff. After independently verifying the staff member, run `uv run python -m scripts.issue_recovery`. The 30-minute, single-use link is saved in a private mode-0600 file under ignored `.state/recovery`, never printed. Transfer it using your approved private channel, then delete the file. No email delivery or MFA is configured. The browser recovery screen belongs to WEB-001; the implemented redemption endpoint is `POST /api/v1/auth/recover`.
 
 Migration 0006 adds recovery tokens after the already-applied 0004/0005 history. Their schemas are preserved for compatibility; organisation and requisition feature completion is tracked independently. Migrate before running the authentication API. Only isolated local test databases have been migrated to 0006 during feature verification; development release migration must be applied separately.
+
+## Organisation configuration
+
+`uv run uvicorn app.org_app:create_app --factory --host 127.0.0.1 --port 8000` runs the delivered runtime, accounts and organisation APIs. Apply migration 0007 first. Approved operators configure real entities, departments, memberships and individual appointments via the protected APIs documented in `docs/ui_todos.md`. No real officeholders are seeded. Appointments have explicit per-entity scope; no automatic group-wide inheritance is inferred. Revoke an existing active appointment before replacement or HOD transfer; historical records remain.
