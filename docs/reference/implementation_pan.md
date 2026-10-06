@@ -400,11 +400,11 @@ Make mandatory business events durable and non-editable by application users fro
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Append-only audit_events, durable outbox_items, migration 0002, strict event registry and safe typed metadata, and audited_transaction failure path implemented. Added database concurrency, failure rollback, and separate archive delivery-state tests. Full backend suite: 97 passed; isolated staged checkout: 24 passed (foundation and audit), with Ruff, formatting, and mypy passing in both.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** No implementation blocker. External protected archive delivery remains OPS-001.
 
 ### Requirement Basis
 
@@ -461,11 +461,11 @@ Business features can produce consistent, attributable append-only histories. Th
 
 ### Acceptance Criteria
 
-- [ ] Forced audit-insert failure rolls back the associated test transition.
-- [ ] UPDATE, DELETE, and TRUNCATE attempts through the runtime database role fail.
-- [ ] Generic administrative endpoints cannot mutate events or linked signed evidence.
-- [ ] A duplicate business action does not produce duplicate successful decision events.
-- [ ] Event registry duplicates are rejected and sensitive values are absent from routine event payloads.
+- [x] Forced audit-insert failure rolls back the associated test transition.
+- [x] UPDATE, DELETE, and TRUNCATE attempts through the runtime database role fail.
+- [x] Generic administrative endpoints cannot mutate events or linked signed evidence.
+- [x] A duplicate business action does not produce duplicate successful decision events.
+- [x] Event registry duplicates are rejected and sensitive values are absent from routine event payloads.
 
 ---
 
