@@ -496,11 +496,11 @@ Allow provisioned BNH users to authenticate, end sessions, and recover access th
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Individual Argon2 accounts, protected provisioning, opaque hashed sessions/CSRF, trusted origins, persisted login/reauthentication throttling, expiry/logout/revocation, and operator-assisted single-use recovery implemented. Full backend checks pass, including 109 tests. Isolated staged checkout also passed 40 tests plus Ruff, formatting, and mypy.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** No implementation blocker. Email delivery and MFA are not configured or claimed; controlled recovery handoff is the implemented method. Browser screens are WEB-001.
 
 ### Requirement Basis
 
@@ -558,11 +558,11 @@ Each staff action has an authenticated, independently identifiable actor and a m
 
 ### Acceptance Criteria
 
-- [ ] Different users obtain different identities and cannot inherit another user's session.
-- [ ] Invalid credentials, inactive accounts, expired sessions, and revoked sessions fail.
-- [ ] Logout terminates the applicable session according to the existing authentication contract.
-- [ ] Recovery replay/expiry tests run when recovery is enabled; unconfigured providers are not mocked into production success.
-- [ ] Sensitive actions receive the current actor and authentication context server-side.
+- [x] Different users obtain different identities and cannot inherit another user's session.
+- [x] Invalid credentials, inactive accounts, expired sessions, and revoked sessions fail.
+- [x] Logout terminates the applicable session according to the existing authentication contract.
+- [x] Recovery replay/expiry tests run when recovery is enabled; unconfigured providers are not mocked into production success.
+- [x] Sensitive actions receive the current actor and authentication context server-side.
 
 ---
 

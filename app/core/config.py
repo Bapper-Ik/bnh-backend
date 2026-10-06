@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
@@ -13,8 +13,8 @@ class Settings(BaseSettings):
     allowed_origins: list[str] = ["http://localhost:5173"]
     database_ssl: bool = True
     cookie_secure: bool = True
-    session_hours: int = 8
-    signing_minutes: int = 5
+    session_hours: int = Field(default=8, ge=1, le=24)
+    signing_minutes: int = Field(default=5, ge=1, le=15)
 
     @model_validator(mode="after")
     def validate_database(self) -> "Settings":
