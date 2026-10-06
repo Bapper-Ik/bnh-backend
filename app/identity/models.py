@@ -16,6 +16,7 @@ class Account(Record, Base):
     email: Mapped[str] = mapped_column(String(320), unique=True)
     password_hash: Mapped[str]
     active: Mapped[bool] = mapped_column(default=True, server_default="true")
+    read_only: Mapped[bool] = mapped_column(default=False, server_default="false")
     permissions: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")
 
 

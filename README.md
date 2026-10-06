@@ -61,3 +61,7 @@ Migration 0006 adds recovery tokens after the already-applied 0004/0005 history.
 ## Organisation configuration
 
 `uv run uvicorn app.org_app:create_app --factory --host 127.0.0.1 --port 8000` runs the delivered runtime, accounts and organisation APIs. Apply migration 0007 first. Approved operators configure real entities, departments, memberships and individual appointments via the protected APIs documented in `docs/ui_todos.md`. No real officeholders are seeded. Appointments have explicit per-entity scope; no automatic group-wide inheritance is inferred. Revoke an existing active appointment before replacement or HOD transfer; historical records remain.
+
+## Record scope and reviewers
+
+Run the delivered scope APIs with `uv run uvicorn app.access_app:create_app --factory --host 127.0.0.1 --port 8000` after migration 0008. The organisation API may explicitly grant entity review access to a different individual through `/api/v1/access/review-grants`. Review accounts are read-only and cannot simultaneously hold an active financial office. Capability and attachment metadata endpoints reveal no storage credentials, public file URLs, or bank details. Upload/download and complete business transitions retain their own feature gates.

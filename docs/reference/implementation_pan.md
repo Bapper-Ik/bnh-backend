@@ -692,11 +692,11 @@ Implement a consistent server-side access policy for requests, decisions, attach
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Shared scoped SQL predicates and action/evidence guards, fixed capability registry, current-authority checks, safe capability APIs, explicit entity review grants, read-only account mode, bank redaction, and denial audits implemented. Full backend suite passes 131 tests; isolated staged checkout passes all 62 tests, Ruff, formatting, and mypy. Requisition/evidence model contracts are included as required scope inputs; uploads and business transitions retain their separate feature gates.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** No implementation blocker. Later file-transfer/export/business-action APIs must reuse these guards and pass their own integrated feature criteria.
 
 ### Requirement Basis
 
@@ -752,11 +752,11 @@ Every later feature can enforce both capability permissions and correct record-l
 
 ### Acceptance Criteria
 
-- [ ] Direct API attempts against another staff member's request and another entity's attachment are denied.
-- [ ] A read-only reviewer cannot decide, record, or amend any request.
-- [ ] A more senior role cannot arbitrarily approve a lower-tier-assigned request.
-- [ ] Changing a client-visible role or permission array does not change server authority.
-- [ ] Sensitive-data projection and authorised lists use consistent scope.
+- [x] Direct API attempts against another staff member's request and another entity's attachment are denied.
+- [x] A read-only reviewer cannot decide, record, or amend any request.
+- [x] A more senior role cannot arbitrarily approve a lower-tier-assigned request.
+- [x] Changing a client-visible role or permission array does not change server authority.
+- [x] Sensitive-data projection and authorised lists use consistent scope.
 
 ---
 

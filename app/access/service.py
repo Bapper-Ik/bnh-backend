@@ -1,0 +1,210 @@
+from datetime import UTC, datetime
+from typing import Literal
+from uuid import UUID
+
+from sqlalchemy import and_, exists, false, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
+
+from app.access.models import ReviewGrant
+from app.core.errors import DomainError
+from app.evidence.models import Attachment
+from app.identity.service import Actor
+from app.organisation.models import Department, Entity, Membership, Office
+from app.organisation.service import active_offices, membership, officeholder
+from app.requisitions.models import Requisition, Revision
+
+Action = Literal[
+    "read",
+    "edit",
+    "submit",
+    "approve",
+    "reject",
+    "return",
+    "board_record",
+    "board_confirm",
+    "board_return",
+    "attachment_upload",
+    "export",
+]
+
+
+def request_scope(actor: Actor, *, inbox: bool = False) -> ColumnElement[bool]:
+    now = datetime.now(UTC)
+    offices = (
+        exists(
+            select(Office.id)
+            .join(
+                Membership,
+                (Membership.identity_id == Office.identity_id)
+                & (Membership.entity_id == Office.entity_id),
+            )
+            .join(Department, Department.id == Membership.department_id)
+            .join(Entity, Entity.id == Office.entity_id)
+            .where(
+                Office.identity_id == actor.id,
+                Office.entity_id == Requisition.entity_id,
+                Office.active.is_(True),
+                Membership.active.is_(True),
+                Department.active.is_(True),
+                Entity.active.is_(True),
+                Office.valid_from <= now,
+                or_(Office.valid_until.is_(None), Office.valid_until > now),
+                or_(Office.role != "hod", Office.department_id == Membership.department_id),
+                or_(
+                    and_(Revision.authority == "board", Office.role.in_(["secretary", "chairman"])),
+                    and_(
+                        Revision.approver_id == actor.id,
+                        Office.role == Revision.authority,
+                        or_(
+                            Office.role != "hod", Office.department_id == Requisition.department_id
+                        ),
+                    ),
+                ),
+            )
+        ).correlate(Requisition, Revision)
+        if not actor.account.read_only
+        else false()
+    )
+    if inbox:
+        return and_(
+            offices,
+            Requisition.state.in_(
+                ["PENDING_AUTHORITY", "AWAITING_BOARD_RESOLUTION", "AWAITING_CHAIRMAN_SIGNOFF"]
+            ),
+        )
+    reviewer = (
+        exists(
+            select(ReviewGrant.id).where(
+                ReviewGrant.identity_id == actor.id,
+                ReviewGrant.entity_id == Requisition.entity_id,
+                ReviewGrant.active.is_(True),
+            )
+        ).correlate(Requisition)
+        if actor.account.read_only
+        else false()
+    )
+    return or_(Requisition.requester_id == actor.id, offices, reviewer)
+
+
+async def can_read(session: AsyncSession, req: Requisition, actor: Actor) -> bool:
+    return bool(
+        await session.scalar(
+            select(Requisition.id)
+            .outerjoin(Revision, Revision.id == Requisition.current_revision_id)
+            .where(Requisition.id == req.id, request_scope(actor))
+        )
+    )
+
+
+async def get_scoped_request(session: AsyncSession, request_id: UUID, actor: Actor) -> Requisition:
+    req = await session.scalar(
+        select(Requisition).where(Requisition.id == request_id).with_for_update()
+    )
+    if not req or not await can_read(session, req, actor):
+        raise DomainError("RESOURCE_NOT_AVAILABLE", "Requisition not found.", 404)
+    return req
+
+
+async def require_action(
+    session: AsyncSession,
+    req: Requisition,
+    actor: Actor,
+    action: Action,
+    *,
+    recorded_by: UUID | None = None,
+) -> None:
+    if not await can_read(session, req, actor):
+        raise DomainError("RESOURCE_NOT_AVAILABLE", "Requisition not found.", 404)
+    if action in {"read", "export"}:
+        return
+    if actor.account.read_only:
+        raise DomainError(
+            "ACCESS_DENIED", "Read-only reviewers cannot change or sign records.", 403
+        )
+    if action in {"edit", "submit", "attachment_upload"}:
+        if req.requester_id == actor.id and req.state in {"DRAFT", "RETURNED_FOR_REVISION"}:
+            current = await membership(session, actor.id, req.entity_id)
+            if current.department_id == req.department_id:
+                return
+    elif action in {"approve", "reject", "return"}:
+        if req.requester_id == actor.id:
+            raise DomainError(
+                "SELF_APPROVAL_PROHIBITED", "You cannot approve your own requisition."
+            )
+        if (
+            req.state == "PENDING_AUTHORITY"
+            and req.current_revision_id
+            and req.requester_id != actor.id
+        ):
+            revision = await session.get(Revision, req.current_revision_id)
+            if revision and revision.authority != "board":
+                office = await officeholder(
+                    session, req.entity_id, revision.authority, req.department_id
+                )
+                if office.identity_id == actor.id and revision.approver_id == actor.id:
+                    return
+    else:
+        roles = {
+            o.role
+            for o in await active_offices(session, req.entity_id)
+            if o.identity_id == actor.id
+        }
+        revision = (
+            await session.get(Revision, req.current_revision_id)
+            if req.current_revision_id
+            else None
+        )
+        if revision and revision.authority == "board":
+            if (
+                action == "board_record"
+                and "secretary" in roles
+                and req.state
+                in {
+                    "AWAITING_BOARD_RESOLUTION",
+                    "DEFERRED",
+                    "CONDITIONALLY_APPROVED",
+                }
+            ):
+                return
+            if (
+                action in {"board_confirm", "board_return"}
+                and "chairman" in roles
+                and req.state == "AWAITING_CHAIRMAN_SIGNOFF"
+                and recorded_by is not None
+                and actor.id not in {recorded_by, req.requester_id}
+            ):
+                return
+    raise DomainError(
+        "ACCESS_DENIED", "Your current role and this record do not permit that action.", 403
+    )
+
+
+async def require_attachment(
+    session: AsyncSession, attachment_id: UUID, actor: Actor
+) -> Attachment:
+    attachment = await session.get(Attachment, attachment_id)
+    if not attachment or attachment.detached:
+        raise DomainError("RESOURCE_NOT_AVAILABLE", "Attachment not found.", 404)
+    req = await get_scoped_request(session, attachment.requisition_id, actor)
+    if attachment.kind == "board_resolution":
+        roles = {
+            o.role
+            for o in await active_offices(session, req.entity_id)
+            if o.identity_id == actor.id
+        }
+        if actor.account.read_only or not roles.intersection({"secretary", "chairman"}):
+            raise DomainError("RESOURCE_NOT_AVAILABLE", "Attachment not found.", 404)
+    return attachment
+
+
+def project_content(
+    content: dict[str, object], actor: Actor
+) -> tuple[dict[str, object], list[str]]:
+    if not actor.account.read_only:
+        return content, []
+    projected = dict(content)
+    vendor = content.get("vendor")
+    if isinstance(vendor, dict):
+        projected["vendor"] = {**vendor, "bank_name": "", "account_number": "", "account_name": ""}
+    return projected, ["vendor.bank_details"]

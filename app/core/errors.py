@@ -17,7 +17,7 @@ def install_errors(app: FastAPI) -> None:
         recorder = getattr(request.app.state, "record_rejected_action", None)
         if recorder:
             try:
-                await recorder(request)
+                await recorder(request, exc)
             except SQLAlchemyError:
                 return JSONResponse(
                     status_code=503,

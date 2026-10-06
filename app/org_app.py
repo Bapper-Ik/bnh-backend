@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from app.audit.service import AuditDetails, record_event
 from app.auth_app import create_app as create_auth
 from app.core.config import Settings
+from app.core.errors import DomainError
 from app.organisation.lifecycle import router as lifecycle_router
 from app.organisation.router import router
 
@@ -12,7 +13,7 @@ from app.organisation.router import router
 def create_app(settings: Settings | None = None) -> FastAPI:
     app = create_auth(settings)
 
-    async def record_rejected_action(request: Request) -> None:
+    async def record_rejected_action(request: Request, exc: DomainError) -> None:
         if request.method not in {"GET", "HEAD", "OPTIONS"} and request.url.path.startswith(
             "/api/v1/organisation/offices"
         ):

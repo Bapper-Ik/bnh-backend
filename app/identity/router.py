@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access.permissions import ADMIN_PERMISSIONS, READ_PERMISSIONS
 from app.audit.service import record_event
 from app.core.database import Identity, get_session
 from app.core.errors import DomainError
@@ -32,7 +33,12 @@ def user_view(actor: Actor) -> UserView:
         account_id=actor.account.id,
         name=actor.identity.display_name,
         email=actor.account.email,
-        permissions=actor.account.permissions,
+        permissions=sorted(
+            set(actor.account.permissions)
+            & ADMIN_PERMISSIONS
+            & (READ_PERMISSIONS if actor.account.read_only else ADMIN_PERMISSIONS)
+        ),
+        read_only=actor.account.read_only,
     )
 
 

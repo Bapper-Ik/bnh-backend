@@ -366,7 +366,7 @@ async def assign_office(
     account = await s.scalar(
         select(Account).where(Account.identity_id == body.identity_id).with_for_update()
     )
-    if not entity or not entity.active or not account or not account.active:
+    if not entity or not entity.active or not account or not account.active or account.read_only:
         raise DomainError("VALIDATION_FAILED", "Select active staff and company.", 422)
     member = await s.scalar(
         select(Membership).where(

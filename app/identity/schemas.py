@@ -22,6 +22,7 @@ class UserView(BaseModel):
     name: str
     email: str
     permissions: list[str]
+    read_only: bool = False
 
 
 class Message(BaseModel):

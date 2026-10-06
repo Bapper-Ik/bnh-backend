@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
+from app.access.permissions import ADMIN_PERMISSIONS, PERMISSION_REGISTRY, READ_PERMISSIONS
 from app.audit.service import AuditDetails, record_event
 from app.core.database import Identity, get_session
 from app.core.errors import DomainError
@@ -19,9 +20,7 @@ from app.identity.models import Account, LoginAttempt, LoginSession
 
 hasher = PasswordHasher()
 DUMMY_HASH = hasher.hash(secrets.token_urlsafe(32))
-PERMISSIONS = frozenset(
-    {"staff:manage", "organisation:manage", "office_assignment:manage", "audit:read"}
-)
+PERMISSIONS = PERMISSION_REGISTRY
 
 
 def digest(value: str) -> str:
@@ -86,7 +85,11 @@ async def current_actor(
 
 
 def require_permission(actor: Actor, permission: str) -> None:
-    if permission not in PERMISSIONS or permission not in actor.account.permissions:
+    if (
+        permission not in ADMIN_PERMISSIONS
+        or permission not in actor.account.permissions
+        or (actor.account.read_only and permission not in READ_PERMISSIONS)
+    ):
         raise DomainError("ACCESS_DENIED", "You do not have access to this action.", 403)
 
 

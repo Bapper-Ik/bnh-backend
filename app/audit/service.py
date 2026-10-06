@@ -20,6 +20,8 @@ def register_events(*names: str) -> None:
 
 register_events(
     "access.denied.failure",
+    "access.permission_change.success",
+    "access.permission_change.failure",
     "identity.created",
     "identity.updated",
     "auth.signed_in",
