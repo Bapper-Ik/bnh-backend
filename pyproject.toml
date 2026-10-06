@@ -1,0 +1,27 @@
+[project]
+name = "custodian-backend"
+version = "0.1.0"
+description = "BNH requisitions and delegated authority"
+requires-python = ">=3.12,<3.13"
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "sqlalchemy[asyncio]>=2.0,<2.1", "asyncpg>=0.30,<1", "alembic>=1.14,<2", "pydantic-settings>=2.7,<3", "argon2-cffi>=23,<26", "email-validator>=2,<3"]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "pytest-asyncio>=0.25,<2", "httpx>=0.28,<1", "ruff>=0.9,<1", "mypy>=1.14,<2"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "B008"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
