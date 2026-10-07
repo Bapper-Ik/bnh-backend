@@ -1,3 +1,5 @@
+> **2026-10-07 database configuration override:** The owner explicitly approved one DATABASE_URL for migrations and the running application, including schema-changing permissions, per environment. Development and production use different databases. This supersedes earlier separate-runtime/migration credential requirements and elevated-role rejection. History triggers remain; the shared owner credential can alter them, so restricted-runtime isolation is not claimed. Local tests retain their own disposable database infrastructure.
+
 > **2026-10-06 scope update:** The owner limits this release to the 14 reusable screens in [ui_scrrens.md](ui_scrrens.md) and the backend functionality required by them. Older sections below supply supporting rules, not permission to add screens or unrelated modules. Backend implementation statuses are not screen-completion claims. Screens 1–3 map to IAM-001 and web access; 4–8 to requisition/authority and web journeys; 9 to Board/evidence; 10 to VEN-001; 11–12 to IAM/ORG; 13 to audit; 14 to identity/session controls. Notifications are a header drawer and evidence/documents a viewer. Each connected journey retains the test, commit and push gate on dev.
 
 # Custodian by Brendan — Platform Feature Specification
@@ -329,6 +331,8 @@ Make the existing backend persist its records in PostgreSQL and establish migrat
 **Implementation Evidence:** Runtime/configuration, dedicated custodian schema, restricted application role, migration 0001, shared identity/version conventions, transactional request dependency, and safe health endpoints implemented. Added fresh-database double-migration, retained-data, app/client restart, API rollback, missing-secret, elevated-role rejection, and unavailable-readiness checks. Full working-tree backend suite: 92 passed; Ruff and mypy passed. Isolated staged feature checkout also passed Ruff, formatting, mypy, and all 11 foundation tests against a fresh local database.
 
 **Blocker:** No implementation blocker. Remote delivery is verified before advancing under the dev-branch gate.
+
+**Single-URL update (2026-10-07):** Owner-approved DATABASE_URL now serves migration and application use per environment. Development and production use separate databases. The previous elevated-role rejection is superseded. Full backend 174 tests and isolated staged 105 tests passed with Ruff, formatting and mypy; deployment environment configuration remains operator-supplied.
 
 ### Requirement Basis
 

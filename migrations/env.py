@@ -7,14 +7,14 @@ from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
+from app.core.config import normalize_database_url
 from app.core.database import Base
 
 load_dotenv()
-url = os.environ.get("MIGRATION_DATABASE_URL")
-if not url:
-    raise RuntimeError(
-        "MIGRATION_DATABASE_URL is required; never migrate using runtime credentials"
-    )
+raw_url = os.environ.get("DATABASE_URL")
+if not raw_url:
+    raise RuntimeError("DATABASE_URL is required before running migrations")
+url = normalize_database_url(raw_url)
 
 
 def run(connection: Connection) -> None:

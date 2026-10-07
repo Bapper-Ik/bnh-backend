@@ -10,11 +10,11 @@ The delivered assembly is `app.vendor_app:create_app`: runtime, accounts, organi
 
 1. Install Python 3.12 and uv, then run `uv sync --locked`.
 2. Configure the ignored `.env` using `.env.example`. Never commit database credentials.
-3. A PostgreSQL owner configures the dedicated `custodian` schema and `custodian_app` login. For a new setup, `python3 scripts/provision_database.py` creates only these objects using the configured migration connection, and saves the runtime login locally. It refuses to overwrite existing objects or credentials.
+3. Set `DATABASE_URL` to the development database connection with schema-changing permissions. For a new database, run `uv run python -m scripts.provision_database` once to prepare the dedicated `custodian` schema and the compatibility role referenced by historical migrations. It preserves existing roles/credentials and does not rewrite `.env`. Production uses a different database and its own `DATABASE_URL`.
 4. Run `uv run alembic upgrade head`.
 5. Run `uv run uvicorn app.vendor_app:create_app --factory --host 127.0.0.1 --port 8000`.
 
-The supplied Render development database is shared with existing software. All Custodian tables, including its Alembic version table, live in the **custodian schema**. Existing public tables and migration history are not modified. Runtime credentials must differ from migration credentials. The application checks its role on startup and refuses schema-owner/admin access.
+The supplied Render development database is shared with existing software. All Custodian tables, including its Alembic version table, live in the **custodian schema**. Existing public tables and migration history are not modified. As explicitly approved, migrations and the application use the same `DATABASE_URL` and may share schema-owner privileges. Development and production must point to separate databases; switching `ENVIRONMENT` alone does not select a database. Standard `postgresql://`, `postgres://` and `postgresql+asyncpg://` URLs are accepted.
 
 TLS is enabled by `DATABASE_SSL=true` for Render. Local isolated tests explicitly disable TLS. Production requires secure cookies and explicit HTTPS origins. Connection strings and internal errors are never included in health responses.
 
@@ -30,7 +30,7 @@ uv run ruff format --check .
 uv run mypy app
 ```
 
-The helper creates an isolated cluster in ignored `.state/test`, listening only on loopback port 55439, and random credentials in ignored `.env.test`. It never resets an existing database. Tests require a database name ending in `_test`, migrate it twice, and use the restricted runtime role. They never fall back to the Render development database. Stop the isolated cluster with:
+The helper creates an isolated cluster in ignored `.state/test`, listening only on loopback port 55439, and random credentials in ignored `.env.test`. It never resets an existing database. Tests require a database name ending in `_test` and migrate it twice. The test-only `TEST_DATABASE_OWNER_URL` creates/migrates disposable local databases; it is not a deployment setting. Most existing security regressions still exercise the restricted compatibility role, while additional tests start the application with the same owner connection used for migrations and verify history triggers. They never fall back to the Render development database. Stop the isolated cluster with:
 
 ```sh
 /usr/lib/postgresql/16/bin/pg_ctl -D .state/test/postgres stop
@@ -38,14 +38,14 @@ The helper creates an isolated cluster in ignored `.state/test`, listening only 
 
 ## Schema changes and recovery
 
-Migrations use `MIGRATION_DATABASE_URL`; the service uses `DATABASE_URL`. Only reviewed forward migrations are supported. Do not run destructive downgrade/reset commands against shared databases. Back up the Custodian schema and evidence store before release changes; restore into a separate database and verify before any recovery cutover. A backup/restore drill and protected evidence archive are required release work, not currently claimed.
+Migrations and the service both use `DATABASE_URL`. The old `MIGRATION_DATABASE_URL` setting is ignored and can be removed. Only reviewed forward migrations are supported. Do not run destructive downgrade/reset commands against shared databases. Back up the Custodian schema and evidence store before release changes; restore into a separate database and verify before any recovery cutover. A backup/restore drill and protected evidence archive are required release work, not currently claimed.
 
-Application/runtime privileges protect historical records; database and hosting owners are a separate trust boundary. Keep migration credentials out of the API process environment in deployed services.
+History triggers continue to reject ordinary update/delete/truncate statements. Because the application now uses schema-changing credentials, those credentials can alter or disable the triggers; runtime privilege isolation is no longer claimed. Keep the single database credential private in each environment.
 
 ## Current API
 
 - `GET /api/v1/health/live`: process liveness.
-- `GET /api/v1/health/ready`: database connectivity, schema availability, and runtime privilege checks; 503 if unavailable.
+- `GET /api/v1/health/ready`: database connectivity and schema access; 503 if unavailable.
 - `/docs` and `/openapi.json`: generated API reference.
 
 Business capabilities are tracked in the shared specification; infrastructure readiness is not staff acceptance.

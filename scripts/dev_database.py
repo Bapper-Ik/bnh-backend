@@ -82,7 +82,7 @@ def main() -> None:
             "ENVIRONMENT=test\nCOOKIE_SECURE=false\nDATABASE_SSL=false\n"
             'ALLOWED_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173"]\n'
             f"DATABASE_URL=postgresql+asyncpg://custodian_app:{app_password}{base}custodian_test\n"
-            f"MIGRATION_DATABASE_URL=postgresql+asyncpg://custodian_owner:{owner_password}{base}custodian_test\n"
+            f"TEST_DATABASE_OWNER_URL=postgresql+asyncpg://custodian_owner:{owner_password}{base}custodian_test\n"
         )
         envfile.chmod(0o600)
         subprocess.run(

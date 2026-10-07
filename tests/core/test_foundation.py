@@ -30,7 +30,7 @@ async def test_persistence_reconnect_and_rollback(settings, engine, sessions):
     await fresh.dispose()
 
 
-async def test_runtime_is_restricted(engine):
+async def test_runtime_checks_schema_access(engine):
     await check_runtime(engine)
 
 
@@ -52,3 +52,18 @@ def test_production_requires_explicit_secure_configuration():
             environment="production",
             database_url=SecretStr("postgresql+asyncpg://app:REPLACE_ME@localhost/db"),
         )
+
+
+@pytest.mark.parametrize("scheme", ["postgres", "postgresql", "postgresql+asyncpg"])
+def test_render_database_urls_use_the_async_driver_without_changing_credentials(scheme):
+    settings = Settings(
+        _env_file=None,
+        database_url=f"{scheme}://owner:synthetic%40password@localhost/custodian_dev",
+    )
+    from sqlalchemy.engine import make_url
+
+    url = make_url(settings.database_url.get_secret_value())
+    assert url.drivername == "postgresql+asyncpg"
+    assert url.username == "owner"
+    assert url.password == "synthetic@password"
+    assert url.database == "custodian_dev"

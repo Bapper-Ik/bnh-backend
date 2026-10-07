@@ -2,9 +2,17 @@ from functools import lru_cache
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import EmailStr, Field, SecretStr, model_validator
+from pydantic import EmailStr, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
+
+
+def normalize_database_url(value: str) -> str:
+    """Accept Render PostgreSQL URLs with the asynchronous driver used by the app."""
+    url = make_url(value)
+    if url.drivername in {"postgres", "postgresql"}:
+        url = url.set(drivername="postgresql+asyncpg")
+    return url.render_as_string(hide_password=False)
 
 
 class Settings(BaseSettings):
@@ -21,6 +29,12 @@ class Settings(BaseSettings):
     account_link_secret: SecretStr | None = None
     frontend_origin: str | None = None
     signing_minutes: int = Field(default=5, ge=1, le=15)
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def database_driver(cls, value: str | SecretStr) -> SecretStr:
+        raw = value.get_secret_value() if isinstance(value, SecretStr) else value
+        return SecretStr(normalize_database_url(raw))
 
     @model_validator(mode="after")
     def validate_database(self) -> "Settings":

@@ -36,6 +36,7 @@ def settings() -> Settings:
 @pytest.fixture(scope="session", autouse=True)
 def migrate(settings: Settings) -> None:
     values = {k: str(v) for k, v in dotenv_values(".env.test").items() if v is not None}
+    values["DATABASE_URL"] = values["TEST_DATABASE_OWNER_URL"]
     for _ in range(2):
         subprocess.run(
             [".venv/bin/alembic", "upgrade", "head"], env={**os.environ, **values}, check=True

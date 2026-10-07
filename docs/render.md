@@ -7,19 +7,33 @@ Set these environment variables in Render:
 | Variable | Value |
 | --- | --- |
 | `ENVIRONMENT` | `production` |
-| `DATABASE_URL` | Copy the **restricted runtime** connection from the local ignored `bnh-backend/.env`. It starts with `postgresql+asyncpg://custodian_app:`. |
-| `MIGRATION_DATABASE_URL` | The migration-owner PostgreSQL connection, using `postgresql+asyncpg://`. Set this privately in Render. Keep `DATABASE_URL` restricted. |
+| `DATABASE_URL` | The PostgreSQL connection for this environment, with permission to run migrations and access application tables. Render `postgresql://` URLs and `postgresql+asyncpg://` are accepted. Set it privately. |
 | `DATABASE_SSL` | `true` |
 | `COOKIE_SECURE` | `true` |
 | `ALLOWED_ORIGINS` | JSON array containing the actual frontend URL, e.g. `["https://YOUR-FRONTEND.onrender.com"]` (no trailing slash). |
 
 Health check: `/api/v1/health/ready`.
 
-The account-access release requires schema **0010**; startup applies it before serving requests. The last separately verified deployed vendor schema was **0009**. The supplied development database was upgraded from 0005 to 0009 to resolve the deployed session-query failure. Startup now runs `alembic upgrade head` before Uvicorn, using the separately configured migration connection. Existing public tables remain untouched. Do **not** use the original database-owner connection as the API runtime connection: startup rejects elevated privileges.
+The account-access release requires schema **0010**; startup applies it before serving requests. The last separately verified deployed vendor schema was **0009**. The supplied development database was upgraded from 0005 to 0009 to resolve the deployed session-query failure. Startup now runs `alembic upgrade head` before Uvicorn, using `DATABASE_URL`. Existing public tables remain untouched. The application now accepts the same schema-owner connection as migrations, as explicitly approved.
 
-As requested, `/app/scripts/start.sh` requires `MIGRATION_DATABASE_URL` and runs `alembic upgrade head` on each start. If migration fails, the process exits without starting Uvicorn. The script then removes `MIGRATION_DATABASE_URL` from the web process environment; `DATABASE_URL` remains the restricted runtime connection. Set `DATABASE_SSL=true` for Render. Do not put credentials in Docker build arguments or Git. Use one service instance while startup migrations run; multiple simultaneous migrations are not coordinated by this shell script.
+As requested, `/app/scripts/start.sh` requires only `DATABASE_URL` and runs `alembic upgrade head` on each start. If migration fails, the process exits without starting Uvicorn. Uvicorn uses that same connection. Remove the obsolete `MIGRATION_DATABASE_URL` setting; it is not read. If `DATABASE_URL` currently names the restricted `custodian_app` login, replace it with this environment's schema-owner connection before redeploying. Set `DATABASE_SSL=true` for Render. Do not put credentials in Docker build arguments or Git. Use one service instance while startup migrations run; multiple simultaneous migrations are not coordinated by this shell script.
 
 The image starts `app.vendor_app:create_app`, the committed feature assembly, without production reload.
+
+## Separate development and production databases
+
+Use one database per environment and one connection variable per service:
+
+| Environment | Backend `DATABASE_URL` |
+| --- | --- |
+| Development | Your development PostgreSQL database connection. |
+| Production | A different production PostgreSQL database connection. |
+
+Changing `ENVIRONMENT` does not switch databases. Set each service's URL explicitly; keep frontend origins and `BACKEND_URL` paired with the corresponding environment. Never reuse the development database as production or point tests at either deployed database. The local `.env.test` database is disposable verification infrastructure, not another deployment requirement.
+
+For a brand-new database, run `python -m scripts.provision_database` once with that database's `DATABASE_URL`, then start normally. This creates the `custodian` schema and, if absent, a non-login compatibility role required by historical grants. It leaves existing roles, credentials and public tables intact. Existing configured databases need no repeated provisioning. The connection needs schema ownership for migrations and, on first provisioning only if the compatibility role is absent, permission to create that role.
+
+The owner approved running the application with schema-changing permissions. Existing history triggers remain, but the shared owner credential can modify those protections; restricted-runtime privilege isolation is no longer a deployment guarantee.
 
 ## First sign-in
 

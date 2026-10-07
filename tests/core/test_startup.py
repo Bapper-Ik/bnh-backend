@@ -12,11 +12,11 @@ def startup(tmp_path):
     log = tmp_path / "calls"
     migration = tmp_path / "alembic"
     migration.write_text(
-        '#!/bin/sh\nprintf "migration %s\\n" "$*" >> "$START_TEST_LOG"\nexit "${START_TEST_FAIL:-0}"\n'
+        '#!/bin/sh\n[ "$DATABASE_URL" = "synthetic-database-value" ] || exit 77\nprintf "migration %s\\n" "$*" >> "$START_TEST_LOG"\nexit "${START_TEST_FAIL:-0}"\n'
     )
     server = tmp_path / "uvicorn"
     server.write_text(
-        '#!/bin/sh\n[ -z "${MIGRATION_DATABASE_URL+x}" ] || exit 77\nprintf "uvicorn %s\\n" "$*" >> "$START_TEST_LOG"\n'
+        '#!/bin/sh\n[ "$DATABASE_URL" = "synthetic-database-value" ] || exit 77\nprintf "uvicorn %s\\n" "$*" >> "$START_TEST_LOG"\n'
     )
     migration.chmod(0o700)
     server.chmod(0o700)
@@ -24,7 +24,7 @@ def startup(tmp_path):
         **os.environ,
         "PATH": str(tmp_path) + ":" + os.environ["PATH"],
         "START_TEST_LOG": str(log),
-        "MIGRATION_DATABASE_URL": "synthetic-migration-value",
+        "DATABASE_URL": "synthetic-database-value",
         "PORT": "12345",
     }
     return Path("scripts/start.sh").resolve(), env, log
@@ -34,7 +34,7 @@ def startup(tmp_path):
     ("mode", "reload", "expected"),
     [("production", "true", False), ("development", "true", True), ("development", "false", False)],
 )
-def test_migration_precedes_server_and_owner_secret_is_removed(startup, mode, reload, expected):
+def test_migration_precedes_server_using_the_same_connection(startup, mode, reload, expected):
     script, env, log = startup
     subprocess.run(
         ["sh", str(script)], env={**env, "ENVIRONMENT": mode, "RELOAD": reload}, check=True
@@ -53,10 +53,10 @@ def test_failed_migration_never_starts_web_process(startup):
     assert log.read_text().splitlines() == ["migration upgrade head"]
 
 
-def test_missing_migration_connection_fails_before_start(startup):
+def test_missing_database_connection_fails_before_start(startup):
     script, env, log = startup
-    env.pop("MIGRATION_DATABASE_URL")
+    env.pop("DATABASE_URL")
     result = subprocess.run(["sh", str(script)], env=env, capture_output=True, text=True)
     assert result.returncode != 0
-    assert "MIGRATION_DATABASE_URL" in result.stderr
+    assert "DATABASE_URL" in result.stderr
     assert not log.exists()

@@ -50,25 +50,6 @@ def make_engine(settings: Settings) -> AsyncEngine:
 
 async def check_runtime(engine: AsyncEngine) -> None:
     async with engine.connect() as conn:
-        role = (
-            (
-                await conn.execute(
-                    text("""
-            SELECT rolsuper, rolcreatedb, rolcreaterole,
-              has_schema_privilege(current_user, 'custodian', 'CREATE') AS schema_write,
-              EXISTS(SELECT 1 FROM pg_class WHERE relnamespace = 'custodian'::regnamespace
-                AND relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)) AS owns_tables
-            FROM pg_roles WHERE rolname = current_user
-        """)
-                )
-            )
-            .mappings()
-            .one()
-        )
-        if any(role.values()):
-            raise RuntimeError(
-                "Application DB role must not own schema/tables or have administrative privileges"
-            )
         await conn.execute(text("SELECT id FROM custodian.identities LIMIT 0"))
 
 
