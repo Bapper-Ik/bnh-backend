@@ -1,6 +1,7 @@
-"""Start a loopback-only vendor browser fixture against the isolated test database."""
+"""Loopback browser fixture with private captured mail; never uses a live provider."""
 
 import asyncio
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -33,6 +34,11 @@ async def prepare() -> Settings:
         database_ssl=False,
         cookie_secure=False,
         allowed_origins=["http://127.0.0.1:4173"],
+        mail_enabled=True,
+        mail_from="synthetic-sender@example.com",
+        resend_api_key=SecretStr("synthetic-not-a-provider-key"),
+        account_link_secret=SecretStr(uuid4().hex + uuid4().hex),
+        frontend_origin="http://127.0.0.1:4173",
     )
     engine = make_engine(settings)
     people = []
@@ -44,7 +50,7 @@ async def prepare() -> Settings:
         department = Department(entity_id=entity.id, name="Operations")
         session.add(department)
         await session.flush()
-        for role in ("owner", "peer", "readonly"):
+        for role in ("owner", "peer", "readonly", "access", "inviter"):
             identity = Identity(display_name="Synthetic " + role)
             session.add(identity)
             await session.flush()
@@ -54,7 +60,7 @@ async def prepare() -> Settings:
                     identity_id=identity.id,
                     email=email,
                     password_hash=hasher.hash(password),
-                    permissions=[],
+                    permissions=["staff:manage"] if role in {"access", "inviter"} else [],
                     read_only=role == "readonly",
                 )
             )
@@ -77,4 +83,22 @@ async def prepare() -> Settings:
 
 if __name__ == "__main__":
     config = asyncio.run(prepare())
-    uvicorn.run(create_app(config), host="127.0.0.1", port=8017, access_log=False)
+
+    async def capture_mail(settings, job, token, purpose):
+        assert settings.environment == "test"
+        fixture = Path(
+            os.environ.get(
+                "CUSTODIAN_BROWSER_FIXTURE", "../bnh-ui/test-results/vendor-fixture.json"
+            )
+        )
+        directory = fixture.parent / "mailbox"
+        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        path = directory / (hashlib.sha256(job.recipient.encode()).hexdigest() + ".json")
+        path.write_text(
+            json.dumps({"purpose": purpose, "url": f"{job.link_origin}/recover#token={token}"})
+        )
+        path.chmod(0o600)
+
+    app = create_app(config)
+    app.state.account_email_sender = capture_mail
+    uvicorn.run(app, host="127.0.0.1", port=8017, access_log=False)

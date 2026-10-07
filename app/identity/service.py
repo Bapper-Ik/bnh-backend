@@ -56,6 +56,8 @@ async def current_actor(
     request: Request, session: AsyncSession = Depends(get_session, scope="function")
 ) -> Actor:
     token = request.cookies.get("custodian_session", "")
+    if not token:
+        raise DomainError("AUTHENTICATION_REQUIRED", "Sign in to continue.", 401)
     row = (
         await session.execute(
             select(LoginSession, Account, Identity)
@@ -66,6 +68,7 @@ async def current_actor(
                 LoginSession.expires_at > datetime.now(UTC),
                 LoginSession.revoked.is_(False),
                 Account.active.is_(True),
+                Account.password_pending.is_(False),
             )
             .with_for_update(of=Account, read=request.method in {"GET", "HEAD", "OPTIONS"})
         )
@@ -115,7 +118,7 @@ async def authenticate(
     valid = await run_in_threadpool(
         verify_password, account.password_hash if account else DUMMY_HASH, password
     )
-    if not valid or not account or not account.active:
+    if not valid or not account or not account.active or account.password_pending:
         attempt.count += 1
         await record_event(
             session, action="auth.failed", actor_id=None, details=AuditDetails(outcome="denied")

@@ -4,7 +4,7 @@ FastAPI + PostgreSQL backend for BNH requisitions. Approval records represent au
 
 Development branch: `dev`. Each feature is verified, committed, and pushed before the next begins.
 
-The independently delivered CORE-001 foundation starts with `app.runtime:create_app`. The working-tree business assembly (`app.main`) is delivered through subsequent feature gates.
+The delivered assembly is `app.vendor_app:create_app`: runtime, accounts, organisation, scoped access and Vendors. Apply migrations through 0010. The working-tree business assembly (`app.main`) is delivered through subsequent feature gates. See [Render setup](docs/render.md) for startup migrations and email configuration.
 
 ## Development setup
 
@@ -12,7 +12,7 @@ The independently delivered CORE-001 foundation starts with `app.runtime:create_
 2. Configure the ignored `.env` using `.env.example`. Never commit database credentials.
 3. A PostgreSQL owner configures the dedicated `custodian` schema and `custodian_app` login. For a new setup, `python3 scripts/provision_database.py` creates only these objects using the configured migration connection, and saves the runtime login locally. It refuses to overwrite existing objects or credentials.
 4. Run `uv run alembic upgrade head`.
-5. Run `uv run uvicorn app.runtime:create_app --factory --host 127.0.0.1 --port 8000`.
+5. Run `uv run uvicorn app.vendor_app:create_app --factory --host 127.0.0.1 --port 8000`.
 
 The supplied Render development database is shared with existing software. All Custodian tables, including its Alembic version table, live in the **custodian schema**. Existing public tables and migration history are not modified. Runtime credentials must differ from migration credentials. The application checks its role on startup and refuses schema-owner/admin access.
 
@@ -54,9 +54,9 @@ Business capabilities are tracked in the shared specification; infrastructure re
 
 Run the delivered authentication API with `uv run uvicorn app.auth_app:create_app --factory --host 127.0.0.1 --port 8000`. Create the first configuration operator with `uv run python -m scripts.create_operator`; it prompts privately for a password and refuses a second bootstrap. Approved staff managers provision individual accounts through `POST /api/v1/auth/accounts`; the new account receives no financial appointment.
 
-Recovery uses a controlled operator handoff. After independently verifying the staff member, run `uv run python -m scripts.issue_recovery`. The 30-minute, single-use link is saved in a private mode-0600 file under ignored `.state/recovery`, never printed. Transfer it using your approved private channel, then delete the file. No email delivery or MFA is configured. The browser recovery screen belongs to WEB-001; the implemented redemption endpoint is `POST /api/v1/auth/recover`.
+Recovery uses a controlled operator handoff. After independently verifying the staff member, run `uv run python -m scripts.issue_recovery`. The 30-minute, single-use link is saved in a private mode-0600 file under ignored `.state/recovery`, never printed. Transfer it using your approved private channel, then delete the file. The same browser reset screen and `POST /api/v1/auth/recover` redeem this link. Pending invitations use the email activation flow instead. MFA is not implemented.
 
-Migration 0006 adds recovery tokens after the already-applied 0004/0005 history. Their schemas are preserved for compatibility; organisation and requisition feature completion is tracked independently. Migrate before running the authentication API. Only isolated local test databases have been migrated to 0006 during feature verification; development release migration must be applied separately.
+Migration 0006 adds recovery tokens after the already-applied 0004/0005 history. Their schemas are preserved for compatibility; organisation and requisition feature completion is tracked independently. Migrate before running the authentication API. The Render development database was separately verified at 0009; this release adds 0010, applied by the startup script before Uvicorn.
 
 ## Organisation configuration
 
@@ -69,3 +69,9 @@ Run the delivered scope APIs with `uv run uvicorn app.access_app:create_app --fa
 ## Vendor records
 
 `uv run uvicorn app.vendor_app:create_app --factory --host 127.0.0.1 --port 8000` adds vendor capture/lookup/version APIs after migration 0009. Vendor creators maintain their own records within active entity membership; a separately authorised maintainer requires vendor:update and vendor:read_sensitive. These fixed grants are not implied by technical administration and are not exposed through a general public permission editor. Bank data is excluded from lookup lists, and every historical version is append-only. No actual vendors or bank details are seeded from the supplied screenshots.
+
+## Browser account access (screens 1–3)
+
+Sign-in, forgot-password and the shared reset/activation page use the real account APIs. Protected invitations create pending named accounts without granting membership or permissions. Pending accounts cannot sign in or act as officeholders. Reset/activation consumes all outstanding links, clears current cookies and revokes existing sessions. Public reset requests return the same response for known and unknown emails and have persisted request limits.
+
+Migration 0010 adds activation state and durable email jobs. Email defaults off; configure Resend and the account-link secret using [the deployment guide](docs/render.md), then enable it. The in-process worker starts automatically and retries with provider idempotency. Local tests capture synthetic mail and mock only the external provider transport; live sender verification and inbox delivery remain deployment checks.

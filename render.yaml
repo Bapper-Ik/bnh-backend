@@ -19,3 +19,5 @@ services:
         value: "true"
       - key: ALLOWED_ORIGINS
         sync: false
+      - key: MAIL_ENABLED
+        value: "false"

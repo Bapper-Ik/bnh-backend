@@ -16,6 +16,7 @@ class Account(Record, Base):
     email: Mapped[str] = mapped_column(String(320), unique=True)
     password_hash: Mapped[str]
     active: Mapped[bool] = mapped_column(default=True, server_default="true")
+    password_pending: Mapped[bool] = mapped_column(default=False, server_default="false")
     read_only: Mapped[bool] = mapped_column(default=False, server_default="false")
     permissions: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")
 
@@ -46,4 +47,19 @@ class RecoveryToken(Record, Base):
     )
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    purpose: Mapped[str] = mapped_column(default="reset", server_default="reset")
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AccountEmail(Record, Base):
+    __tablename__ = "account_emails"
+    token_id: Mapped[UUID] = mapped_column(
+        ForeignKey("custodian.recovery_tokens.id", ondelete="RESTRICT"), unique=True
+    )
+    recipient: Mapped[str] = mapped_column(String(320))
+    sender: Mapped[str] = mapped_column(String(320))
+    link_origin: Mapped[str] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(default="pending", server_default="pending")
+    attempts: Mapped[int] = mapped_column(default=0, server_default="0")
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

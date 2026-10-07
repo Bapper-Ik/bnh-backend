@@ -138,7 +138,10 @@ async def reauthenticate(
 
 @router.post("/recover", response_model=Message)
 async def complete_recovery(
-    body: Recover, request: Request, session: AsyncSession = Depends(get_session, scope="function")
+    body: Recover,
+    request: Request,
+    response: Response,
+    session: AsyncSession = Depends(get_session, scope="function"),
 ) -> Message | JSONResponse:
     require_origin(request)
     if not await recover(session, body.token, body.password):
@@ -150,6 +153,8 @@ async def complete_recovery(
                 "request_id": request.state.request_id,
             },
         )
+    response.delete_cookie("custodian_session", path="/")
+    response.delete_cookie("custodian_csrf", path="/")
     return Message(message="Password updated. Sign in again.")
 
 

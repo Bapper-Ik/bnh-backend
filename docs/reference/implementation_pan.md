@@ -502,7 +502,9 @@ Allow provisioned BNH users to authenticate, end sessions, and recover access th
 
 **Implementation Evidence:** Individual Argon2 accounts, protected provisioning, opaque hashed sessions/CSRF, trusted origins, persisted login/reauthentication throttling, expiry/logout/revocation, and operator-assisted single-use recovery implemented. Full backend checks pass, including 109 tests. Isolated staged checkout also passed 40 tests plus Ruff, formatting, and mypy.
 
-**Blocker:** No implementation blocker. Email delivery and MFA are not configured or claimed; controlled recovery handoff is the implemented method. Browser screens are WEB-001.
+**Account-access extension (screens 1–3):** Email reset and protected invitations now use durable Resend jobs, single-use activation/reset links and session revocation. Pending accounts have no automatic authority and cannot sign in before activation. Browser implementation is recorded under WEB-001. Migration 0010 is required. Verification: full backend suite 168 passed; isolated staged release 99 passed with Ruff, formatting and mypy.
+
+**Deployment limitation:** Resend credentials, a verified sender and live inbox delivery remain to be configured/verified in Render; email defaults off and reports unavailable. Controlled operator recovery remains available. MFA is not implemented.
 
 ### Requirement Basis
 
@@ -1909,11 +1911,11 @@ Build the shared navigation, sign-in/session experience, and minimum permitted o
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** In Progress
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Shared grayscale shell and connected account screens 1–3 are implemented: sign-in, generic forgot-password requests, shared activation/reset, expired/replayed links, password matching, session revocation, safe outage retry and desktop/mobile layout. Five real-backend browser journeys include account access and vendor regression. Isolated frontend lint, formatting, typecheck (zero errors/warnings), three unit tests, build and all five browser journeys passed. Desktop reset and narrow activation layouts were visually inspected. Staff & Access Management (11) and Organisation & Authority (12) remain unfinished; this feature is not complete.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Deployment limitation:** Email delivery requires private Render configuration and a verified Resend sender; no live inbox delivery is claimed. Remaining administration screens retain their own delivery gate.
 
 ### Requirement Basis
 

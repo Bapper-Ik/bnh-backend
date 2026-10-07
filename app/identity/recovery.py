@@ -1,4 +1,4 @@
-"""Operator-assisted recovery. No public token issuance or pretend mail delivery."""
+"""Single-use reset and invitation tokens, shared by email and controlled handoff."""
 
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -29,7 +29,7 @@ async def issue_recovery(session: AsyncSession, email: str) -> str:
     account = await session.scalar(
         select(Account).where(Account.email == email.lower()).with_for_update()
     )
-    if not account or not account.active:
+    if not account or not account.active or account.password_pending:
         raise DomainError(
             "RESOURCE_NOT_AVAILABLE", "No active account is available for recovery.", 404
         )
@@ -76,6 +76,7 @@ async def recover(session: AsyncSession, token: str, password: str) -> bool:
         or not stored
         or stored.consumed_at
         or stored.expires_at <= now
+        or (stored.purpose == "activate") != account.password_pending
     ):
         await record_event(
             session,
@@ -85,6 +86,7 @@ async def recover(session: AsyncSession, token: str, password: str) -> bool:
         )
         return False
     account.password_hash = await run_in_threadpool(hasher.hash, password)
+    account.password_pending = False
     await session.execute(
         update(RecoveryToken)
         .where(RecoveryToken.account_id == account.id, RecoveryToken.consumed_at.is_(None))
@@ -93,7 +95,7 @@ async def recover(session: AsyncSession, token: str, password: str) -> bool:
     await revoke_sessions(session, account, account.identity_id)
     await record_event(
         session,
-        action="auth.recovered",
+        action="auth.activated" if stored.purpose == "activate" else "auth.recovered",
         actor_id=account.identity_id,
         resource_id=account.identity_id,
     )
