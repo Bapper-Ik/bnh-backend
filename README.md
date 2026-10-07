@@ -4,7 +4,7 @@ FastAPI + PostgreSQL backend for BNH requisitions. Approval records represent au
 
 Development branch: `dev`. Each feature is verified, committed, and pushed before the next begins.
 
-The delivered assembly is `app.vendor_app:create_app`: runtime, accounts, organisation, scoped access and Vendors. Apply migrations through 0010. The working-tree business assembly (`app.main`) is delivered through subsequent feature gates. See [Render setup](docs/render.md) for startup migrations and email configuration.
+The delivered assembly is `app.vendor_app:create_app`: runtime, accounts, organisation, scoped access, Vendors and Staff & Access management. Apply migrations through 0010. The working-tree business assembly (`app.main`) is delivered through subsequent feature gates. See [Render setup](docs/render.md) for startup migrations and email configuration.
 
 ## Development setup
 
@@ -75,3 +75,9 @@ Run the delivered scope APIs with `uv run uvicorn app.access_app:create_app --fa
 Sign-in, forgot-password and the shared reset/activation page use the real account APIs. Protected invitations create pending named accounts without granting membership or permissions. Pending accounts cannot sign in or act as officeholders. Reset/activation consumes all outstanding links, clears current cookies and revokes existing sessions. Public reset requests return the same response for known and unknown emails and have persisted request limits.
 
 Migration 0010 adds activation state and durable email jobs. Email defaults off; configure Resend and the account-link secret using [the deployment guide](docs/render.md), then enable it. The in-process worker starts automatically and retries with provider idempotency. Local tests capture synthetic mail and mock only the external provider transport; live sender verification and inbox delivery remain deployment checks.
+
+## Staff & Access management (screen 11)
+
+`/api/v1/staff` supplies a protected searchable/paginated directory, account status, memberships and appointment history. The Svelte `/staff` screen uses server-authorised actions and versioned mutation endpoints. An administrator cannot change their own status, membership or appointments through this screen. Department changes require organisation:manage; appointments require office_assignment:manage. Account administration does not grant financial authority, and invitations grant no membership or permissions.
+
+Use the same vendor_app assembly and existing migration 0010; this feature requires no new schema migration. Configure real companies/departments through the existing organisation APIs before assigning membership. Organisation screen 12 is still pending. Email-disabled deployments explicitly show that invitations are unavailable; existing staff management remains usable. Endpoint details are in [integration notes](docs/ui_todos.md).

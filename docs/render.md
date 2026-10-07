@@ -43,7 +43,7 @@ There is no public registration or default password. Create the first configurat
 python -m scripts.create_operator
 ```
 
-For a local virtual environment, use `.venv/bin/python -m scripts.create_operator`. The command prompts privately for the password and refuses to bootstrap once accounts already exist. This account has technical configuration permissions, not financial approval authority. Vendor creation also requires an active company/department membership. A new operator without membership sees the setup-needed state; staff and organisation management screens are still being implemented. Existing organisation APIs handle configured staff membership.
+For a local virtual environment, use `.venv/bin/python -m scripts.create_operator`. The command prompts privately for the password and refuses to bootstrap once accounts already exist. This account has technical configuration permissions, not financial approval authority. Vendor creation also requires an active company/department membership. A new operator without membership sees the setup-needed state; Staff & Access (screen 11) is available to authorised operators; Organisation & Authority (screen 12) is still pending. Existing organisation APIs handle configured staff membership.
 
 ## Local container
 
@@ -54,7 +54,7 @@ docker run --rm -p 8000:10000 --env-file .env custodian-backend
 
 The Docker context excludes all environment files, local database files, tests and Git metadata. The final image runs as a non-root user and installs locked runtime dependencies only.
 
-This release includes screens 1–3 (sign-in, forgot password, reset/activation) and screen 10 (Vendors). Email requires the configuration below. The remaining screens in the fourteen-screen inventory are unfinished. Health checks do not establish complete workflows or staff acceptance.
+This release includes screens 1–3 (sign-in, forgot password, reset/activation), screen 10 (Vendors), and screen 11 (Staff & Access). Email requires the configuration below. The remaining screens in the fourteen-screen inventory are unfinished. Health checks do not establish complete workflows or staff acceptance.
 
 Reference: [Render Docker deployments](https://render.com/docs/docker), [uv Docker integration](https://docs.astral.sh/uv/guides/integration/docker/).
 
@@ -76,4 +76,4 @@ The application starts its durable email worker automatically. Issuing a link, r
 
 Links expire after 30 minutes and are single use. Raw links are reconstructed in memory from the private link secret and a random token identifier; neither raw tokens nor message bodies are stored in the jobs table. Rotating the secret cancels unsent jobs that no longer match; previously sent unexpired links still redeem against their stored hash. Request fresh links after rotation. Keep the key out of frontend settings, Docker build arguments and source control.
 
-After deploying both services and configuring mail, use your own provisioned account to request a reset, confirm inbox delivery, complete it, and sign in again. Invitation issuance currently uses the protected `/api/v1/auth/invitations` API; the Staff & Access Management drawer is a later screen. New invitees receive no automatic membership or authority. Live provider credentials, domain verification and inbox delivery have not been verified by the local test suite.
+After deploying both services and configuring mail, use your own provisioned account to request a reset, confirm inbox delivery, complete it, and sign in again. Authorised staff managers can issue and resend invitations through the `/staff` drawer. It uses the protected invitation APIs; email-disabled deployments show unavailable invitation controls. New invitees receive no automatic membership or authority. Live provider credentials, domain verification and inbox delivery have not been verified by the local test suite.

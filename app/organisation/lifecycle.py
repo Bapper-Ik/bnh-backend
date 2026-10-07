@@ -113,6 +113,10 @@ async def update_staff(
     identity = await s.get(Identity, identity_id)
     if not account or not identity:
         raise DomainError("RESOURCE_NOT_AVAILABLE", "Staff member not found.", 404)
+    if body.active is not None and identity_id == actor.id:
+        raise DomainError(
+            "ACCESS_DENIED", "Another administrator must change your account status.", 403
+        )
     apply_update(identity, body)
     identity.version += 1
     if body.active is not None:

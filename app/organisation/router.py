@@ -366,7 +366,14 @@ async def assign_office(
     account = await s.scalar(
         select(Account).where(Account.identity_id == body.identity_id).with_for_update()
     )
-    if not entity or not entity.active or not account or not account.active or account.read_only:
+    if (
+        not entity
+        or not entity.active
+        or not account
+        or not account.active
+        or account.password_pending
+        or account.read_only
+    ):
         raise DomainError("VALIDATION_FAILED", "Select active staff and company.", 422)
     member = await s.scalar(
         select(Membership).where(
@@ -443,6 +450,9 @@ async def revoke(
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> OfficeView:
     require_permission(actor, "office_assignment:manage")
+    holder = await s.scalar(select(Office.identity_id).where(Office.id == office_id))
+    if holder:
+        await s.scalar(select(Account).where(Account.identity_id == holder).with_for_update())
     office = await s.scalar(select(Office).where(Office.id == office_id).with_for_update())
     if not office:
         raise DomainError("RESOURCE_NOT_AVAILABLE", "Appointment not found.", 404)

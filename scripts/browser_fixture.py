@@ -50,7 +50,16 @@ async def prepare() -> Settings:
         department = Department(entity_id=entity.id, name="Operations")
         session.add(department)
         await session.flush()
-        for role in ("owner", "peer", "readonly", "access", "inviter"):
+        for role in (
+            "owner",
+            "peer",
+            "readonly",
+            "access",
+            "inviter",
+            "admin",
+            "admin_peer",
+            "managed",
+        ):
             identity = Identity(display_name="Synthetic " + role)
             session.add(identity)
             await session.flush()
@@ -60,7 +69,11 @@ async def prepare() -> Settings:
                     identity_id=identity.id,
                     email=email,
                     password_hash=hasher.hash(password),
-                    permissions=["staff:manage"] if role in {"access", "inviter"} else [],
+                    permissions=["staff:manage", "organisation:manage", "office_assignment:manage"]
+                    if role in {"admin", "admin_peer"}
+                    else ["staff:manage"]
+                    if role in {"access", "inviter"}
+                    else [],
                     read_only=role == "readonly",
                 )
             )
@@ -70,7 +83,13 @@ async def prepare() -> Settings:
                 )
             )
             people.append({"role": role, "email": email})
-        fixture = {"people": people, "password": password, "entity": str(entity.id)}
+        fixture = {
+            "people": people,
+            "password": password,
+            "entity": str(entity.id),
+            "entity_name": entity.name,
+            "department": str(department.id),
+        }
     await engine.dispose()
     target = Path(
         os.environ.get("CUSTODIAN_BROWSER_FIXTURE", "../bnh-ui/test-results/vendor-fixture.json")
