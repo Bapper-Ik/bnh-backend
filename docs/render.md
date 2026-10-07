@@ -8,15 +8,16 @@ Set these environment variables in Render:
 | --- | --- |
 | `ENVIRONMENT` | `production` |
 | `DATABASE_URL` | Copy the **restricted runtime** connection from the local ignored `bnh-backend/.env`. It starts with `postgresql+asyncpg://custodian_app:`. |
+| `MIGRATION_DATABASE_URL` | The migration-owner PostgreSQL connection, using `postgresql+asyncpg://`. Set this privately in Render. Keep `DATABASE_URL` restricted. |
 | `DATABASE_SSL` | `true` |
 | `COOKIE_SECURE` | `true` |
 | `ALLOWED_ORIGINS` | JSON array containing the actual frontend URL, e.g. `["https://YOUR-FRONTEND.onrender.com"]` (no trailing slash). |
 
 Health check: `/api/v1/health/ready`.
 
-The vendor release requires migrations through **0009** in the isolated `custodian` schema. The supplied development database was previously at 0005; run `alembic upgrade head` using the migration connection before starting this release. Its original public tables must remain untouched. Do **not** use the original database-owner connection as the API runtime connection: startup rejects elevated privileges.
+The deployed vendor schema is at **0009**. The supplied development database was upgraded from 0005 to 0009 to resolve the deployed session-query failure. Startup now runs `alembic upgrade head` before Uvicorn, using the separately configured migration connection. Existing public tables remain untouched. Do **not** use the original database-owner connection as the API runtime connection: startup rejects elevated privileges.
 
-For this release and future releases, run `alembic upgrade head` in a separate migration/release environment with `MIGRATION_DATABASE_URL` and `DATABASE_SSL=true`. The API start command does not migrate and does not require owner credentials. Do not put database credentials in Docker build arguments or Git.
+As requested, `/app/scripts/start.sh` requires `MIGRATION_DATABASE_URL` and runs `alembic upgrade head` on each start. If migration fails, the process exits without starting Uvicorn. The script then removes `MIGRATION_DATABASE_URL` from the web process environment; `DATABASE_URL` remains the restricted runtime connection. Set `DATABASE_SSL=true` for Render. Do not put credentials in Docker build arguments or Git. Use one service instance while startup migrations run; multiple simultaneous migrations are not coordinated by this shell script.
 
 The image starts `app.vendor_app:create_app`, the committed feature assembly, without production reload.
 

@@ -115,6 +115,7 @@ Board cases require an actual meeting resolution. The Company Secretary records 
 - Use one documented error shape with `code`, safe `message`, optional field errors, and request ID. Preserve the specification's error meanings with appropriate HTTP statuses. No exposed tracebacks.
 - Expose OpenAPI for frontend type generation. Scope before pagination/counts. Keep sensitive fields out of broad summaries.
 - Use durable outbox/jobs for email, exports, and archives. Retry safely. Notification failure never fabricates an approval or removes in-app work items.
+- The owner explicitly requires `scripts/start.sh` to run `alembic upgrade head` before Uvicorn. Keep migration and runtime URLs separate, fail startup if migration fails, and remove the migration URL from the web child environment. This supersedes earlier separate-release-only migration guidance.
 - Require durable PostgreSQL and private evidence storage for production. Document migrations, readiness, workers, backup/isolated restore, and evidence archival. Verify before claiming deployment or protection.
 - Approved means authorised, not paid. No payment execution, legacy approval stages, ledgers, or operational Modules 2–4 in this release.
 
