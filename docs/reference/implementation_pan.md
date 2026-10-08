@@ -895,6 +895,8 @@ Support safe private evidence uploads and a deliberate, server-validated signing
 
 **Implementation Evidence:** Private Cloudinary authenticated-raw upload/download adapter, scoped metadata and viewer, bounded PDF/PNG/JPEG validation, no-scanner release policy, version invalidation and frozen submission manifests. Fresh-authenticated drawn signing binds identity, declaration, scope, exact content and evidence; signature expiry is rechecked after provider reads. Migration 0011 protects frozen attachment metadata. Private-provider HTTP contracts and errors are tested separately from explicit isolated browser storage fixtures. Exact staged release passed Ruff/format/mypy, 208 backend tests on fresh local PostgreSQL, frontend lint/format/types, six unit tests, production build and all fifteen browser journeys (2026-10-08). Publication is recorded by the feature commits on origin/dev.
 
+**Attachment layout refinement (2026-10-08):** Supporting-document rows use a truncated filename with a full-name tooltip, file icon/type/size, and compact View/Remove actions. Full filenames remain in accessible button labels and the private viewer. Actions align to the right on desktop and beneath the filename on narrow screens, retaining 44px touch targets. Requisition detail grid tracks are allowed to shrink so document rows and cost tables stay within the mobile page. API behavior, confirmation, permission checks and frozen-evidence controls are unchanged.
+
 **Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
 
 ### Requirement Basis
