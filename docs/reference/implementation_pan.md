@@ -1735,11 +1735,11 @@ Notify the assigned actor and requester about submissions, decisions, returns, S
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Migration 0015, atomic outbox projection, deduplicated persistent recipient alerts, scoped list/read APIs, leased Resend delivery with frozen envelopes and bounded retries, safe aggregate operator diagnostics, notification audit records and the shared Svelte header drawer are delivered. Current role/stage checks retain individual and private Board boundaries. The final paired release passed Ruff/format/mypy, 277 PostgreSQL-backed backend tests, frontend lint/format/type checks, six unit tests, production build and all 32 real-browser journeys. Desktop and 390px drawer screenshots were inspected. Both existing Dockerfiles include the release; deploy backend before frontend. See task_done.md and the backend Render guide for mail-disabled/backlog/retry behavior and deployment limits.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** No implementation blocker. Render rollout and live inbox delivery of these new notifications are not established by local synthetic tests; genuine staff acceptance remains separate.
 
 ### Requirement Basis
 
@@ -1796,11 +1796,11 @@ The correct users receive persistent actionable work items, and delivery failure
 
 ### Acceptance Criteria
 
-- [ ] Submission and Board-record events notify the correct assigned actor.
-- [ ] Worker restart does not lose queued jobs.
-- [ ] Retry does not create duplicate in-app notifications or multiple decisions.
-- [ ] An unauthorised user cannot list/read another recipient's notifications.
-- [ ] Missing email configuration is reported honestly; the in-app queue still shows outstanding work.
+- [x] Submission and Board-record events notify the correct assigned actor.
+- [x] Worker restart does not lose queued jobs.
+- [x] Retry does not create duplicate in-app notifications or multiple decisions.
+- [x] An unauthorised user cannot list/read another recipient's notifications.
+- [x] Missing email configuration is reported honestly; the in-app queue still shows outstanding work.
 
 ---
 

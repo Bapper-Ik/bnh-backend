@@ -11,15 +11,18 @@ from uuid import uuid4
 import uvicorn
 from dotenv import dotenv_values
 from pydantic import SecretStr
+from sqlalchemy import update
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.access.models import ReviewGrant
+from app.audit.models import OutboxItem
 from app.core.config import Settings
 from app.core.database import Identity, make_engine
 from app.identity.models import Account
 from app.identity.service import hasher
 from app.main import create_app
+from app.notifications.models import Notification
 from app.organisation.models import Department, Entity, Membership, Office
 
 
@@ -46,6 +49,18 @@ async def prepare() -> Settings:
     people = []
     password = "Synthetic-browser-password-" + uuid4().hex
     async with async_sessionmaker(engine, expire_on_commit=False)() as session, session.begin():
+        await session.execute(
+            update(OutboxItem)
+            .where(
+                OutboxItem.destination == "requisition_notification", OutboxItem.status == "pending"
+            )
+            .values(status="delivered", delivered_at=datetime.now(UTC))
+        )
+        await session.execute(
+            update(Notification)
+            .where(Notification.email_status.in_(["pending", "sending"]))
+            .values(email_status="cancelled", last_error="test_fixture_reset")
+        )
         entity = Entity(name="Synthetic browser company " + uuid4().hex)
         session.add(entity)
         await session.flush()
@@ -170,7 +185,33 @@ if __name__ == "__main__":
         )
         path.chmod(0o600)
 
+    async def capture_notification(settings, row, reference):
+        assert settings.environment == "test"
+        from app.notifications.service import TEMPLATES, href
+
+        fixture = Path(
+            os.environ.get(
+                "CUSTODIAN_BROWSER_FIXTURE", "../bnh-ui/test-results/vendor-fixture.json"
+            )
+        )
+        directory = fixture.parent / "notification-mailbox"
+        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        path = directory / (str(row.id) + ".json")
+        path.write_text(
+            json.dumps(
+                {
+                    "recipient": row.recipient_address,
+                    "reference": reference,
+                    "title": TEMPLATES[row.template],
+                    "url": f"{row.link_origin}{href(row)}",
+                }
+            )
+        )
+        path.chmod(0o600)
+        return uuid4()
+
     app = create_app(config)
+    app.state.notification_sender = capture_notification
     app.state.account_email_sender = capture_mail
 
     # Explicit isolated fixture, never a production storage fallback.

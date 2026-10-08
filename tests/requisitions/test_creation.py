@@ -47,6 +47,7 @@ class TestStorage:
 @pytest.fixture
 async def context(settings):
     app = create_app(settings)
+    app.state.notification_worker = False
     storage = TestStorage()
     app.state.evidence_storage = storage
     app.state.uploads_enabled = True
@@ -642,6 +643,7 @@ async def test_draft_survives_new_application_and_another_actor_cannot_use_its_c
     ).json()
     # A new application and connection pool have no access to the original process state.
     restarted = create_app(settings)
+    restarted.state.notification_worker = False
     async with restarted.router.lifespan_context(restarted):
         async with AsyncClient(
             transport=ASGITransport(restarted),

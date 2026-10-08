@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.access.models import ReviewGrant
+from app.access.principal import Principal
 from app.board.models import ChairmanDecision, Resolution
 from app.core.errors import DomainError
 from app.evidence.models import Attachment
@@ -32,7 +33,7 @@ Action = Literal[
 ]
 
 
-def request_scope(actor: Actor, *, inbox: bool = False) -> ColumnElement[bool]:
+def request_scope(actor: Principal, *, inbox: bool = False) -> ColumnElement[bool]:
     now = datetime.now(UTC)
     pending_board = exists(
         select(Resolution.id).where(

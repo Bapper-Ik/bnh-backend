@@ -72,6 +72,10 @@ register_events(
     "board.returned",
     "requisition.history_view.success",
     "requisition.history_view.failure",
+    "notification.create.success",
+    "notification.delivery.success",
+    "notification.delivery.failure",
+    "notification.read.success",
     "audit.search.success",
     "audit.search.failure",
     "audit.integrity_check.success",
@@ -85,6 +89,7 @@ class AuditDetails(BaseModel):
     """Identifiers/enums only: no arbitrary bank, password or signature values."""
 
     model_config = ConfigDict(extra="forbid")
+    notification_id: UUID | None = None
     revision_id: UUID | None = None
     resolution_id: UUID | None = None
     department_id: UUID | None = None
@@ -96,6 +101,7 @@ class AuditDetails(BaseModel):
     content_digest: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     resource_type: (
         Literal[
+            "notification",
             "identity",
             "auth",
             "organisation",

@@ -6,6 +6,7 @@ from sqlalchemy import String, and_, cast, exists, func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.access.models import ReviewGrant
+from app.access.principal import Principal
 from app.access.service import request_scope
 from app.audit.models import AuditEvent
 from app.core.database import Identity
@@ -49,7 +50,7 @@ def visible_requests(actor: Actor):  # type: ignore[no-untyped-def]
     )
 
 
-def board_requests(actor: Actor):  # type: ignore[no-untyped-def]
+def board_requests(actor: Principal):  # type: ignore[no-untyped-def]
     route = Revision.context["route"]
     conditions = []
     # Mirror Board document access: both frozen appointments must still be unique and eligible.
@@ -115,7 +116,7 @@ async def search_events(s: AsyncSession, actor: Actor, filters: AuditFilters) ->
                 and_(
                     AuditEvent.resource_id == Requisition.id,
                     AuditEvent.details["resource_type"].astext.in_(
-                        ["requisition", "board", "signature"]
+                        ["requisition", "board", "signature", "notification"]
                     ),
                 ),
                 Requisition.id == Attachment.requisition_id,

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -31,4 +31,7 @@ class OutboxItem(Record, Base):
     destination: Mapped[str] = mapped_column(String(30))
     status: Mapped[str] = mapped_column(default="pending", server_default="pending")
     attempts: Mapped[int] = mapped_column(default=0, server_default="0")
+    available_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

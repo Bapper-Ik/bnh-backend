@@ -1,3 +1,6 @@
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
 from uuid import UUID
 
 from fastapi import FastAPI, Request
@@ -10,6 +13,8 @@ from app.core.errors import DomainError
 from app.evidence.router import router as evidence_router
 from app.evidence.storage import CloudinaryStorage
 from app.history.router import router as history_router
+from app.notifications.delivery import delivery_loop, send_resend
+from app.notifications.router import router as notifications_router
 from app.requisitions.router import approvals_router
 from app.requisitions.router import router as requisitions_router
 from app.vendor_app import create_app as create_runtime
@@ -24,6 +29,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(board_router)
     app.include_router(history_router)
     app.include_router(audit_router)
+    app.include_router(notifications_router)
+    app.state.notification_sender = send_resend
+    app.state.notification_worker = True
+    original_lifespan = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+        async with original_lifespan(application):
+            worker = None
+            if application.state.notification_worker:
+                worker = asyncio.create_task(
+                    delivery_loop(
+                        application.state.sessions,
+                        application.state.settings,
+                        application.state.notification_sender,
+                    )
+                )
+            try:
+                yield
+            finally:
+                if worker:
+                    worker.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await worker
+
+    app.router.lifespan_context = lifespan
     cfg = settings or get_settings()
     app.state.evidence_storage = CloudinaryStorage(cfg)
     app.state.uploads_enabled = bool(
