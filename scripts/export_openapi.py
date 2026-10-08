@@ -52,7 +52,7 @@ def ts(schema: dict) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--app", choices=["app.vendor_app", "app.main"], default="app.vendor_app")
+    parser.add_argument("--app", choices=["app.vendor_app", "app.main"], default="app.main")
     args = parser.parse_args()
     schema = importlib.import_module(args.app).create_app().openapi()
     target = Path("../bnh-ui/src/lib/api")

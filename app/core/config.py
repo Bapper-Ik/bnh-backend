@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     resend_api_key: SecretStr | None = None
     account_link_secret: SecretStr | None = None
     frontend_origin: str | None = None
+    cloudinary_url: SecretStr | None = None
+    cloudinary_cloud_name: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9_-]+$")
+    cloudinary_api_key: SecretStr | None = None
+    cloudinary_api_secret: SecretStr | None = None
+    attachment_max_bytes: int = Field(default=5 * 1024 * 1024, ge=1024, le=10 * 1024 * 1024)
+    attachment_max_count: int = Field(default=10, ge=1, le=20)
     signing_minutes: int = Field(default=5, ge=1, le=15)
 
     @field_validator("database_url", mode="before")
@@ -50,6 +56,30 @@ class Settings(BaseSettings):
                 raise ValueError("Production requires secure cookies and HTTPS origins")
             if url.password == "REPLACE_ME":
                 raise ValueError("Production requires configured database credentials")
+        if self.cloudinary_url:
+            from urllib.parse import unquote
+
+            cloud = urlsplit(self.cloudinary_url.get_secret_value())
+            if (
+                cloud.scheme != "cloudinary"
+                or not cloud.hostname
+                or not cloud.username
+                or not cloud.password
+                or cloud.query
+                or cloud.fragment
+                or cloud.path not in {"", "/"}
+            ):
+                raise ValueError("CLOUDINARY_URL must contain a cloud name, API key and API secret")
+            if not self.cloudinary_cloud_name:
+                self.cloudinary_cloud_name = cloud.hostname
+            if not self.cloudinary_api_key:
+                self.cloudinary_api_key = SecretStr(unquote(cloud.username))
+            if not self.cloudinary_api_secret:
+                self.cloudinary_api_secret = SecretStr(unquote(cloud.password))
+        if self.cloudinary_cloud_name and not all(
+            c.isalnum() or c in "-_" for c in self.cloudinary_cloud_name
+        ):
+            raise ValueError("Invalid Cloudinary cloud name")
         if self.mail_enabled:
             if (
                 not self.mail_from

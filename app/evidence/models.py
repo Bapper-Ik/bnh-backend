@@ -16,6 +16,7 @@ class Attachment(Record, Base):
     uploaded_by: Mapped[UUID] = mapped_column(
         ForeignKey("custodian.identities.id", ondelete="RESTRICT")
     )
+    upload_key: Mapped[UUID | None] = mapped_column(unique=True)
     kind: Mapped[str]
     filename: Mapped[str]
     media_type: Mapped[str]

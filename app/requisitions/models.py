@@ -27,6 +27,7 @@ class Requisition(Record, Base):
     state: Mapped[str] = mapped_column(default="DRAFT", server_default="DRAFT")
     version: Mapped[int] = mapped_column(default=1, server_default="1")
     content: Mapped[dict[str, object]] = mapped_column(JSONB)
+    context: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict, server_default="{}")
     total: Mapped[Decimal] = mapped_column(Numeric(17, 2))
     current_revision_id: Mapped[UUID | None]
     revision_number: Mapped[int] = mapped_column(default=0, server_default="0")
@@ -40,6 +41,7 @@ class Revision(Record, Base):
     )
     number: Mapped[int]
     content: Mapped[dict[str, object]] = mapped_column(JSONB)
+    context: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict, server_default="{}")
     total: Mapped[Decimal] = mapped_column(Numeric(17, 2))
     requester_name: Mapped[str]
     department_name: Mapped[str]

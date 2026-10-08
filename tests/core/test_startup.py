@@ -41,7 +41,7 @@ def test_migration_precedes_server_using_the_same_connection(startup, mode, relo
     )
     lines = log.read_text().splitlines()
     assert lines[0] == "migration upgrade head"
-    assert lines[1].startswith("uvicorn app.vendor_app:create_app --factory")
+    assert lines[1].startswith("uvicorn app.main:create_app --factory")
     assert "--port 12345" in lines[1]
     assert ("--reload" in lines[1]) == expected
 

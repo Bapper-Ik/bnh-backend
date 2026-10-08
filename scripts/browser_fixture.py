@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -17,8 +18,8 @@ from app.core.config import Settings
 from app.core.database import Identity, make_engine
 from app.identity.models import Account
 from app.identity.service import hasher
-from app.organisation.models import Department, Entity, Membership
-from app.vendor_app import create_app
+from app.main import create_app
+from app.organisation.models import Department, Entity, Membership, Office
 
 
 async def prepare() -> Settings:
@@ -50,6 +51,12 @@ async def prepare() -> Settings:
         department = Department(entity_id=entity.id, name="Operations")
         session.add(department)
         await session.flush()
+        request_entity = Entity(name="Synthetic requisition company " + uuid4().hex)
+        session.add(request_entity)
+        await session.flush()
+        request_department = Department(entity_id=request_entity.id, name="Requisition Operations")
+        session.add(request_department)
+        await session.flush()
         for role in (
             "owner",
             "peer",
@@ -59,6 +66,12 @@ async def prepare() -> Settings:
             "admin",
             "admin_peer",
             "managed",
+            "requester",
+            "hod",
+            "chief_of_staff",
+            "md",
+            "secretary",
+            "chairman",
         ):
             identity = Identity(display_name="Synthetic " + role)
             session.add(identity)
@@ -77,16 +90,38 @@ async def prepare() -> Settings:
                     read_only=role == "readonly",
                 )
             )
+            request_role = role in {
+                "requester",
+                "hod",
+                "chief_of_staff",
+                "md",
+                "secretary",
+                "chairman",
+            }
             session.add(
                 Membership(
-                    identity_id=identity.id, entity_id=entity.id, department_id=department.id
+                    identity_id=identity.id,
+                    entity_id=request_entity.id if request_role else entity.id,
+                    department_id=request_department.id if request_role else department.id,
                 )
             )
+            if role in {"hod", "chief_of_staff", "md", "secretary", "chairman"}:
+                session.add(
+                    Office(
+                        identity_id=identity.id,
+                        entity_id=request_entity.id,
+                        department_id=request_department.id if role == "hod" else None,
+                        role=role,
+                        valid_from=datetime.now(UTC),
+                        authorisation_reference="Synthetic browser appointment",
+                    )
+                )
             people.append({"role": role, "email": email})
         fixture = {
             "people": people,
             "password": password,
             "entity": str(entity.id),
+            "request_entity": str(request_entity.id),
             "entity_name": entity.name,
             "department": str(department.id),
         }
@@ -120,4 +155,21 @@ if __name__ == "__main__":
 
     app = create_app(config)
     app.state.account_email_sender = capture_mail
+
+    # Explicit isolated fixture, never a production storage fallback.
+    class TestStorage:
+        def __init__(self):
+            self.files = {}
+
+        async def put(self, key, data, media_type):
+            self.files[key] = data
+            return str(uuid4())
+
+        async def get(self, key, digest, size):
+            data = self.files[key]
+            assert len(data) == size and hashlib.sha256(data).hexdigest() == digest
+            return data
+
+    app.state.evidence_storage = TestStorage()
+    app.state.uploads_enabled = True
     uvicorn.run(app, host="127.0.0.1", port=8017, access_log=False)

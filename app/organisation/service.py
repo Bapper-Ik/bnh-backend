@@ -50,11 +50,12 @@ async def active_offices(session: AsyncSession, entity_id: UUID) -> list[Office]
                     Department.active.is_(True),
                     or_(Office.role != "hod", Office.department_id == Membership.department_id),
                     Account.active.is_(True),
+                    Account.read_only.is_(False),
                     Account.password_pending.is_(False),
                     Office.valid_from <= now,
                     or_(Office.valid_until.is_(None), Office.valid_until > now),
                 )
-                .with_for_update(of=[Office, Membership, Entity, Department], read=True)
+                .with_for_update(of=[Office, Membership, Entity, Department, Account], read=True)
             )
         ).all()
     )

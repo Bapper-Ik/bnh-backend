@@ -98,6 +98,9 @@ Board cases require an actual meeting resolution. The Company Secretary records 
 
 ## Authentication, authorisation, and evidence
 
+The owner selected the existing Cloudinary account for supporting documents (2026-10-08). Use authenticated raw assets and application-authorised downloads; credentials stay on the backend. No R2, Backblaze or scanner provisioning is part of this release.
+
+
 - Provision individual staff accounts by invitation/controlled onboarding. No public sign-up or shared office accounts. Use vetted credential/session libraries, persisted revocation, and expiring single-use recovery tokens.
 - Prefer opaque server sessions in HttpOnly, Secure production cookies. Protect cookie-authenticated mutations against CSRF and check allowed origins. Never put credentials in browser storage or staff listings.
 - Register fixed `resource:action` permissions centrally. Enforce capability plus record/entity scope on every read/write, search/count, attachment, export, and decision.

@@ -14,11 +14,11 @@ Set these environment variables in Render:
 
 Health check: `/api/v1/health/ready`.
 
-The account-access release requires schema **0010**; startup applies it before serving requests. The last separately verified deployed vendor schema was **0009**. The supplied development database was upgraded from 0005 to 0009 to resolve the deployed session-query failure. Startup now runs `alembic upgrade head` before Uvicorn, using `DATABASE_URL`. Existing public tables remain untouched. The application now accepts the same schema-owner connection as migrations, as explicitly approved.
+The requisition release requires schema **0011**; startup applies it before serving requests. The last separately verified deployed vendor schema was **0009**. The supplied development database was upgraded from 0005 to 0009 to resolve the deployed session-query failure. Startup now runs `alembic upgrade head` before Uvicorn, using `DATABASE_URL`. Existing public tables remain untouched. The application now accepts the same schema-owner connection as migrations, as explicitly approved.
 
 As requested, `/app/scripts/start.sh` requires only `DATABASE_URL` and runs `alembic upgrade head` on each start. If migration fails, the process exits without starting Uvicorn. Uvicorn uses that same connection. Remove the obsolete `MIGRATION_DATABASE_URL` setting; it is not read. If `DATABASE_URL` currently names the restricted `custodian_app` login, replace it with this environment's schema-owner connection before redeploying. Set `DATABASE_SSL=true` for Render. Do not put credentials in Docker build arguments or Git. Use one service instance while startup migrations run; multiple simultaneous migrations are not coordinated by this shell script.
 
-The image starts `app.vendor_app:create_app`, the committed feature assembly, without production reload.
+The image starts `app.main:create_app`, the committed feature assembly, without production reload.
 
 ## Separate development and production databases
 
@@ -77,3 +77,24 @@ The application starts its durable email worker automatically. Issuing a link, r
 Links expire after 30 minutes and are single use. Raw links are reconstructed in memory from the private link secret and a random token identifier; neither raw tokens nor message bodies are stored in the jobs table. Rotating the secret cancels unsent jobs that no longer match; previously sent unexpired links still redeem against their stored hash. Request fresh links after rotation. Keep the key out of frontend settings, Docker build arguments and source control.
 
 After deploying both services and configuring mail, use your own provisioned account to request a reset, confirm inbox delivery, complete it, and sign in again. Authorised staff managers can issue and resend invitations through the `/staff` drawer. It uses the protected invitation APIs; email-disabled deployments show unavailable invitation controls. New invitees receive no automatic membership or authority. Live provider credentials, domain verification and inbox delivery have not been verified by the local test suite.
+
+## Requisition documents with Cloudinary
+
+This release starts `app.main:create_app` and applies migration **0011** before serving requests. Existing Dockerfiles remain the deployment entrypoints. The frontend image allows bodies up to 11 MB; backend validation defaults to 5 MB per attachment and 10 attachments per requisition (PDF, PNG and JPEG). PDF content is limited to 200 unencrypted pages and images to 20 million pixels. Keep your own Render `BODY_SIZE_LIMIT` override at 11M if you set one; it must exceed the backend file limit.
+
+Configure Cloudinary **only on the backend Render service**, using either:
+
+- `CLOUDINARY_URL`: copy the private API environment URL from your Cloudinary dashboard; or
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`: the three corresponding values.
+
+Prefer one configuration method. Use a separate Cloudinary product environment for production where available. Never put these secrets in frontend variables, build arguments, source control or chat. No R2 bucket or scanner is required.
+
+The backend uploads every document as `resource_type=raw`, `type=authenticated`, with a unique public ID and overwrite disabled. It does not return Cloudinary delivery URLs or credentials to the browser. Downloads pass through the application permission checks and use a short-lived private Cloudinary download internally, with size and SHA-256 verification before serving the file. Submission rechecks attached object bytes before freezing the manifest. Cloudinary account owners can still remove/change assets outside the app; such changes must fail retrieval rather than silently replacing signed evidence. Arrange backup/retention separately; this is not a protected external archive.
+
+If credentials are missing, upload controls explain that private storage is unavailable. Other request functions still work, including submission without optional documents. Provider errors produce a real error and do not save a successful attachment record. A database rollback after a provider upload can leave an unreferenced private object; remove such objects only after reconciling against attachment records and frozen revision manifests. Do not configure automatic deletion of this folder.
+
+Cloudinary's account/security settings may restrict PDF delivery. Verify a real private PDF upload and download on the deployed service; do not solve a delivery restriction by making documents public. Local tests use explicit isolated storage fixtures and separately exercise Cloudinary HTTP contracts; they do not prove your Cloudinary account configuration or quotas. Malware scanning is not performed in this release, as requested.
+
+Requisitions are routed and a durable notification intent is saved atomically. Email delivery for requisition events and the individual approval/Board workspaces remain later journeys. Account activation/reset emails continue through Resend.
+
+References: [Cloudinary upload parameters](https://cloudinary.com/documentation/upload_parameters), [private downloads](https://cloudinary.com/documentation/control_access_to_media).

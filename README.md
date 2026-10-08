@@ -4,7 +4,7 @@ FastAPI + PostgreSQL backend for BNH requisitions. Approval records represent au
 
 Development branch: `dev`. Each feature is verified, committed, and pushed before the next begins.
 
-The delivered assembly is `app.vendor_app:create_app`: runtime, accounts, organisation, scoped access, Vendors and Staff & Access management. Apply migrations through 0010. The working-tree business assembly (`app.main`) is delivered through subsequent feature gates. See [Render setup](docs/render.md) for startup migrations and email configuration.
+The delivered assembly is `app.main:create_app`: runtime, accounts, organisation, scoped access, Vendors, staff administration and requisition creation/submission with private documents. Apply migrations through 0011. Individual approval actions and Board workspaces remain subsequent journeys. See [Render setup](docs/render.md) for startup migrations and email configuration.
 
 ## Development setup
 
@@ -12,7 +12,7 @@ The delivered assembly is `app.vendor_app:create_app`: runtime, accounts, organi
 2. Configure the ignored `.env` using `.env.example`. Never commit database credentials.
 3. Set `DATABASE_URL` to the development database connection with schema-changing permissions. For a new database, run `uv run python -m scripts.provision_database` once to prepare the dedicated `custodian` schema and the compatibility role referenced by historical migrations. It preserves existing roles/credentials and does not rewrite `.env`. Production uses a different database and its own `DATABASE_URL`.
 4. Run `uv run alembic upgrade head`.
-5. Run `uv run uvicorn app.vendor_app:create_app --factory --host 127.0.0.1 --port 8000`.
+5. Run `uv run uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000`.
 
 The supplied Render development database is shared with existing software. All Custodian tables, including its Alembic version table, live in the **custodian schema**. Existing public tables and migration history are not modified. As explicitly approved, migrations and the application use the same `DATABASE_URL` and may share schema-owner privileges. Development and production must point to separate databases; switching `ENVIRONMENT` alone does not select a database. Standard `postgresql://`, `postgres://` and `postgresql+asyncpg://` URLs are accepted.
 
@@ -68,7 +68,7 @@ Run the delivered scope APIs with `uv run uvicorn app.access_app:create_app --fa
 
 ## Vendor records
 
-`uv run uvicorn app.vendor_app:create_app --factory --host 127.0.0.1 --port 8000` adds vendor capture/lookup/version APIs after migration 0009. Vendor creators maintain their own records within active entity membership; a separately authorised maintainer requires vendor:update and vendor:read_sensitive. These fixed grants are not implied by technical administration and are not exposed through a general public permission editor. Bank data is excluded from lookup lists, and every historical version is append-only. No actual vendors or bank details are seeded from the supplied screenshots.
+`uv run uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000` adds vendor capture/lookup/version APIs after migration 0009. Vendor creators maintain their own records within active entity membership; a separately authorised maintainer requires vendor:update and vendor:read_sensitive. These fixed grants are not implied by technical administration and are not exposed through a general public permission editor. Bank data is excluded from lookup lists, and every historical version is append-only. No actual vendors or bank details are seeded from the supplied screenshots.
 
 ## Browser account access (screens 1–3)
 

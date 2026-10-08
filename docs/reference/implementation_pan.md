@@ -891,11 +891,11 @@ Support safe private evidence uploads and a deliberate, server-validated signing
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Private Cloudinary authenticated-raw upload/download adapter, scoped metadata and viewer, bounded PDF/PNG/JPEG validation, no-scanner release policy, version invalidation and frozen submission manifests. Fresh-authenticated drawn signing binds identity, declaration, scope, exact content and evidence; signature expiry is rechecked after provider reads. Migration 0011 protects frozen attachment metadata. Private-provider HTTP contracts and errors are tested separately from explicit isolated browser storage fixtures. Exact staged release passed Ruff/format/mypy, 208 backend tests on fresh local PostgreSQL, frontend lint/format/types, six unit tests, production build and all fifteen browser journeys (2026-10-08). Publication is recorded by the feature commits on origin/dev.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
 
 ### Requirement Basis
 
@@ -930,6 +930,7 @@ Attachment UUID, scoped owner/resource, safe storage key and immutable object ve
 - An expired, reused, wrong-actor, wrong-action, or wrong-version challenge fails.
 - Do not accept a client-supplied content digest as proof of what was reviewed; recompute from the server snapshot.
 - No successful upload/validation check is simulated when the configured private storage provider is unavailable. The affected evidence path stays blocked.
+- Storage decision (owner, 2026-10-08): use the existing Cloudinary account with authenticated raw assets and application-authorised downloads. Keep credentials on the backend.
 - Release decision (owner, 2026-10-08): do not implement or deploy a document malware scanner in this release. Preserve private storage, scoped access, file type/size/content validation, safe download names, hashes and immutable submitted evidence. Record scanning as not performed; do not label files malware-free, scanned or virus-checked. Basic validation does not detect malware. A future scanning feature is deferred, not implemented or a release prerequisite.
 - Removing an unused draft attachment may detach it, but evidence referenced by a submitted version cannot be overwritten or removed.
 - File validation/signature-method limits are documented settings; do not invent legal certification claims.
@@ -958,12 +959,12 @@ Business workflows can collect private attachments and attributable signature ev
 
 ### Acceptance Criteria
 
-- [ ] Unauthorised download and upload-to-another-request attempts fail.
-- [ ] Unsupported, oversized, malformed or unavailable uploads cannot enter a signed submission; valid privately stored files do not require malware scanning in this release.
-- [ ] Attachment state and UI copy distinguish completed basic validation from malware scanning, which is not performed in this release.
-- [ ] Signature replay, wrong actor, expired authentication, and altered request content fail.
-- [ ] An authorised signing action binds the intended version and a subsequent file replacement does not change it.
-- [ ] A missing signature-method approval is reported separately from completed staging implementation.
+- [x] Unauthorised download and upload-to-another-request attempts fail.
+- [x] Unsupported, oversized, malformed or unavailable uploads cannot enter a signed submission; valid privately stored files do not require malware scanning in this release.
+- [x] Attachment state and UI copy distinguish completed basic validation from malware scanning, which is not performed in this release.
+- [x] Signature replay, wrong actor, expired authentication, and altered request content fail.
+- [x] An authorised signing action binds the intended version and a subsequent file replacement does not change it.
+- [x] A missing signature-method approval is reported separately from completed staging implementation.
 
 ---
 
@@ -994,11 +995,11 @@ Calculate the required approval authority from the exact NGN total and the reque
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Exact decimal Authority Policy bnh-doa-v1, inclusive kobo boundaries, all sixteen requester/amount cells, highest-office floor, department-scoped HOD and current assignment checks. Read-only/inactive officeholders are excluded and account/appointment eligibility is locked for decisions. Preview and submission share server rules; immutable revision context preserves offices and routing. tests/authority and tests/requisitions cover the sample total, boundaries, self-request escalation, assignment blockers and forged fields. Exact staged release passed Ruff/format/mypy, 208 backend tests on fresh local PostgreSQL, frontend lint/format/types, six unit tests, production build and all fifteen browser journeys (2026-10-08). Publication is recorded by the feature commits on origin/dev.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
 
 ### Requirement Basis
 
@@ -1054,11 +1055,11 @@ The exact confirmed authority is returned consistently for every valid amount/re
 
 ### Acceptance Criteria
 
-- [ ] All sixteen matrix cells pass parameterised tests.
-- [ ] Tests include one kobo below, exactly at, and one kobo above every threshold.
-- [ ] HOD department mismatch and multiple overlapping executive assignments produce explicit denial/blockers.
-- [ ] Role-switching cannot avoid an MD or HOD requester floor.
-- [ ] The resolver works in a service test without a browser, and APIs cannot override its result.
+- [x] All sixteen matrix cells pass parameterised tests.
+- [x] Tests include one kobo below, exactly at, and one kobo above every threshold.
+- [x] HOD department mismatch and multiple overlapping executive assignments produce explicit denial/blockers.
+- [x] Role-switching cannot avoid an MD or HOD requester floor.
+- [x] The resolver works in a service test without a browser, and APIs cannot override its result.
 
 ---
 
@@ -1089,11 +1090,11 @@ Allow a requester to create, resume, and update a draft containing the supplied 
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Screens 5–7 support scoped search/status/pagination, incomplete persisted drafts, versioned vendor selection or manual capture, all scope/date/term/cost fields and private attachments. The server supplies identity/department/reference, exact line rounding and totals. Creation retries are idempotent; stale saves preserve UI edits. Tests cover all-field round trips, immutable vendor provenance, restricted-bank omission, concurrent saves, the six-line 71640.00 sample and recovery through a new application/connection pool. Exact staged release passed Ruff/format/mypy, 208 backend tests on fresh local PostgreSQL, frontend lint/format/types, six unit tests, production build and all fifteen browser journeys (2026-10-08). Publication is recorded by the feature commits on origin/dev.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
 
 ### Requirement Basis
 
@@ -1132,7 +1133,7 @@ All Section 3.3 fields; draft row_version; stable requisition UUID/reference; ve
 
 ### API and Interface Contract
 
-Proposed actions: POST /requisitions; GET /requisitions/{uuid}; PATCH /requisitions/{uuid}/draft; GET /requisitions?scope=mine. Reuse the existing paging/filter envelope. Detail responses include computed totals, safe validation feedback, row_version, and server-derived allowed actions.
+Proposed actions: POST /requisitions; GET /requisitions/{uuid}; PUT /requisitions/{uuid}/draft; GET /requisitions with server-enforced actor scope. Reuse the existing paging/filter envelope. Detail responses include computed totals, safe validation feedback, row_version, and server-derived allowed actions.
 
 ### Delivery Surface
 
@@ -1150,11 +1151,11 @@ A staff member can persist and resume a correctly calculated draft containing BN
 
 ### Acceptance Criteria
 
-- [ ] Save/reload preserves all form sections, item ordering, and explicit unknown states.
-- [ ] The sample six unit-quantity costs 2890, 3400, 7450, 1400, 27500, and 29000 total exactly ₦71,640.
-- [ ] Zero/negative quantity, unsupported precision, non-finite prices, and tampered server-controlled fields fail.
-- [ ] Two editors using the same stale row_version cannot silently overwrite each other.
-- [ ] Draft data survives restart and cannot be read/edited by an unrelated requester.
+- [x] Save/reload preserves all form sections, item ordering, and explicit unknown states.
+- [x] The sample six unit-quantity costs 2890, 3400, 7450, 1400, 27500, and 29000 total exactly ₦71,640.
+- [x] Zero/negative quantity, unsupported precision, non-finite prices, and tampered server-controlled fields fail.
+- [x] Two editors using the same stale row_version cannot silently overwrite each other.
+- [x] Draft data survives restart and cannot be read/edited by an unrelated requester.
 
 ---
 
@@ -1171,11 +1172,11 @@ Turn a complete draft into a signed, versioned request routed by Authority Polic
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Signed submission freezes revision content, vendor provenance, identities/scope, requester offices, declaration/authentication evidence, file versions/hashes and policy route. Signature, submission/routing audit and durable notification intent commit atomically. Tests cover retries, races, wrong-actor challenges, expired/stale content, provider failures and rollback. Staff enter PENDING_AUTHORITY directly; low-value MD requests enter AWAITING_BOARD_RESOLUTION without a fabricated Board outcome. Exact staged release passed Ruff/format/mypy, 208 backend tests on fresh local PostgreSQL, frontend lint/format/types, six unit tests, production build and all fifteen browser journeys (2026-10-08). Publication is recorded by the feature commits on origin/dev.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
 
 ### Requirement Basis
 
@@ -1215,7 +1216,7 @@ Draft UUID/expected version; submission idempotency key; signed declaration text
 
 ### API and Interface Contract
 
-POST /requisitions/{uuid}/submit with expected_version, idempotency_key, and signing challenge/evidence reference. The server returns the submitted revision, policy version, route explanation, current state, and next actor/office. There is no writable approver_id or submitted_total override.
+POST /requisitions/{uuid}/actions with action=submit, expected_version, idempotency_key, and signing challenge/capture. The server returns the submitted revision, policy version, route explanation, current state, and next actor/office. There is no writable approver_id or submitted_total override.
 
 ### Delivery Surface
 
@@ -1233,11 +1234,11 @@ A signed, immutable request revision is assigned directly to the correct authori
 
 ### Acceptance Criteria
 
-- [ ] Incomplete/invalid drafts cannot submit and remain safely editable.
-- [ ] Signature/content tampering and stale draft versions fail.
-- [ ] Each requester category enters the correct queue, including a low-value MD request entering the Board queue.
-- [ ] Forced signature/audit/route persistence failure leaves no partly submitted request.
-- [ ] Submitted item, beneficiary, requester, and attachment content cannot be patched by any ordinary CRUD endpoint.
+- [x] Incomplete/invalid drafts cannot submit and remain safely editable.
+- [x] Signature/content tampering and stale draft versions fail.
+- [x] Each requester category enters the correct queue, including a low-value MD request entering the Board queue.
+- [x] Forced signature/audit/route persistence failure leaves no partly submitted request.
+- [x] Submitted item, beneficiary, requester, and attachment content cannot be patched by any ordinary CRUD endpoint.
 
 ---
 
@@ -1997,11 +1998,11 @@ Deliver the complete self-service browser journey for staff to prepare, sign, su
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** In Progress
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** The creation/submission portion of screens 5–7 is delivered: scoped list, reusable create/edit form, vendor lookup, exact totals, route preview, private attachment viewer, keyboard/pointer signing controls and submission history. Three new real-PostgreSQL browser journeys pass alongside twelve earlier journeys, including staff-to-HOD and low-value MD-to-Board paths, stale edits, cancellation, restricted links and session expiry. Desktop and 390px layouts were inspected. Dashboard, returned-request browser workflow and exports remain unfinished; this overall feature remains In Progress. Exact staged release passed Ruff/format/mypy, 208 backend tests on fresh local PostgreSQL, frontend lint/format/types, six unit tests, production build and all fifteen browser journeys (2026-10-08). Publication is recorded by the feature commits on origin/dev.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
 
 ### Requirement Basis
 
@@ -2057,11 +2058,11 @@ A real staff member can complete the requester journey independently on their ow
 
 ### Acceptance Criteria
 
-- [ ] Browser test creates a draft, reloads it, signs/submits, and observes the correct next actor.
+- [x] Browser test creates a draft, reloads it, signs/submits, and observes the correct next actor.
 - [ ] A returned request is corrected and rerouted when its amount crosses a threshold.
 - [ ] Unsafe attachment and invalid field errors are comprehensible and preserve safe draft work.
 - [ ] Signature capture is usable by mouse/touch and supports the approved accessibility alternative when configured.
-- [ ] No request succeeds merely through local state without a successful backend transition.
+- [x] No request succeeds merely through local state without a successful backend transition.
 
 ---
 

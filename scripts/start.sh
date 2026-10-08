@@ -7,6 +7,6 @@ alembic upgrade head
 
 # Reload remains opt-in for local development and is never enabled in production.
 if [ "${ENVIRONMENT:-production}" = "development" ] && [ "${RELOAD:-false}" = "true" ]; then
-  exec uvicorn app.vendor_app:create_app --factory --host 0.0.0.0 --port "${PORT:-10000}" --reload
+  exec uvicorn app.main:create_app --factory --host 0.0.0.0 --port "${PORT:-10000}" --reload
 fi
-exec uvicorn app.vendor_app:create_app --factory --host 0.0.0.0 --port "${PORT:-10000}"
+exec uvicorn app.main:create_app --factory --host 0.0.0.0 --port "${PORT:-10000}"
