@@ -8,6 +8,7 @@ from app.core.config import Settings
 from app.identity.access_links import router as links_router
 from app.identity.email_delivery import delivery_loop, send_resend
 from app.identity.router import router
+from app.identity.security import router as security_router
 from app.runtime import create_app as create_runtime
 
 
@@ -40,4 +41,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.router.lifespan_context = lifespan
     app.include_router(router)
     app.include_router(links_router)
+    app.include_router(security_router)
     return app

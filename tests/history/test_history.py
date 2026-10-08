@@ -1,5 +1,6 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID, uuid4
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
@@ -116,14 +117,20 @@ async def test_search_filters_scope_dates_and_literal_wildcards(context, organis
     p = organisation["people"]
     await sign_in(client, p["staff"])
     req = await draft(client, organisation, "10")
+    local_day = (
+        datetime.fromisoformat(req["created_at"])
+        .astimezone(ZoneInfo("Africa/Lagos"))
+        .date()
+        .isoformat()
+    )
     params = {
         "requester": "staff",
         "department": "Operations",
         "company": "Synthetic company",
         "vendor": "Synthetic supplier",
         "state": "DRAFT",
-        "date_from": datetime.now(UTC).date().isoformat(),
-        "date_to": datetime.now(UTC).date().isoformat(),
+        "date_from": local_day,
+        "date_to": local_day,
         "my_requests": "true",
         "limit": 1,
     }

@@ -76,6 +76,19 @@ async def current_actor(
     if row is None:
         raise DomainError("AUTHENTICATION_REQUIRED", "Sign in to continue.", 401)
     auth, account, identity = row
+    # The joined read may have waited for a revocation holding the Account lock.
+    # Re-read the session after acquiring that lock, using a fresh statement snapshot.
+    auth = await session.scalar(
+        select(LoginSession)
+        .where(
+            LoginSession.id == auth.id,
+            LoginSession.revoked.is_(False),
+            LoginSession.expires_at > datetime.now(UTC),
+        )
+        .execution_options(populate_existing=True)
+    )
+    if auth is None:
+        raise DomainError("AUTHENTICATION_REQUIRED", "Sign in to continue.", 401)
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
         require_origin(request)
         csrf = request.headers.get("x-csrf-token", "")

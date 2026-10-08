@@ -82,6 +82,7 @@ async def prepare() -> Settings:
             "readonly",
             "auditor",
             "access",
+            "security",
             "inviter",
             "admin",
             "admin_peer",
