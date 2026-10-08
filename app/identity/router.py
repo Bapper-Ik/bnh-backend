@@ -23,11 +23,12 @@ from app.identity.service import (
     require_origin,
     require_permission,
 )
+from app.organisation.service import has_approval_office
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
 
-def user_view(actor: Actor) -> UserView:
+async def user_view(actor: Actor, session: AsyncSession) -> UserView:
     return UserView(
         id=actor.id,
         account_id=actor.account.id,
@@ -39,6 +40,7 @@ def user_view(actor: Actor) -> UserView:
             & (READ_PERMISSIONS if actor.account.read_only else ADMIN_PERMISSIONS)
         ),
         read_only=actor.account.read_only,
+        can_access_approval_inbox=await has_approval_office(session, actor.id),
     )
 
 
@@ -91,12 +93,15 @@ async def login(
         )
     identity = await session.get(Identity, account.identity_id)
     assert identity
-    return user_view(Actor(account, identity, auth))
+    return await user_view(Actor(account, identity, auth), session)
 
 
 @router.get("/me", response_model=UserView)
-async def me(actor: Actor = Depends(current_actor)) -> UserView:
-    return user_view(actor)
+async def me(
+    actor: Actor = Depends(current_actor),
+    session: AsyncSession = Depends(get_session, scope="function"),
+) -> UserView:
+    return await user_view(actor, session)
 
 
 @router.post("/logout", response_model=Message)

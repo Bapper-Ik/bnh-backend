@@ -24,6 +24,7 @@ class UserView(BaseModel):
     email: str
     permissions: list[str]
     read_only: bool = False
+    can_access_approval_inbox: bool = False
 
 
 class Message(BaseModel):

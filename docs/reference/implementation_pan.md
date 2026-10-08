@@ -1279,6 +1279,8 @@ Provide the three individual authorities with a scoped inbox and transaction-bou
 
 **Blocker:** No local implementation blocker. Render deployment, live provider behavior and BNH signature-method acceptance remain separate checks. Notification delivery and Board workflows are outside this gate; durable notification intent is recorded.
 
+**Navigation correction (2026-10-08):** Ordinary requesters no longer see My Tasks / Approval Inbox. Login and `/auth/me` expose `can_access_approval_inbox`, derived from an active, effective HOD/Chief of Staff/MD appointment and active account, company, membership and department; HOD department alignment is required. The flag uses the same eligible-office query as authority resolution and does not depend on pending task count or administrative permissions. The frontend hides the navigation item and redirects ineligible inbox deep links to Requisitions. Returned requests remain in the requester’s Requisitions list. No approval authority is granted by this display flag; each request still enforces assignment and no-self-approval checks. Verification passed all 226 backend tests, six frontend unit tests, 23 browser journeys and configured lint/format/type/build checks. No migration or new setting is required; deploy backend then frontend and refresh existing browser tabs.
+
 ### Requirement Basis
 
 Confirmed business scope plus the explicitly identified implementation defaults in Section 1.6.

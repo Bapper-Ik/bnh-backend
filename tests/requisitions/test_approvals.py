@@ -420,3 +420,80 @@ async def test_replacement_officeholder_cannot_inherit_assigned_request(
     detail = (await client.get(f"/api/v1/requisitions/{req['id']}")).json()
     assert "no longer holds" in detail["decision_blocker"]
     assert detail["available_actions"] == []
+
+
+async def test_inbox_navigation_uses_office_not_queue_or_admin_permissions(
+    context, organisation, sessions
+):
+    client, _, _ = context
+    people = organisation["people"]
+    for role, person in people.items():
+        response = await client.post(
+            "/api/v1/auth/login",
+            json={"email": person["email"], "password": "Synthetic-test-password-2026"},
+        )
+        assert response.status_code == 200
+        expected = role in {"hod", "other_hod", "chief_of_staff", "md"}
+        assert response.json()["can_access_approval_inbox"] is expected
+        assert (await client.get("/api/v1/auth/me")).json()["can_access_approval_inbox"] is expected
+        assert (await client.get("/api/v1/approvals/inbox")).json()["total"] == 0
+    async with sessions() as s, s.begin():
+        await s.execute(
+            update(Account)
+            .where(Account.identity_id == people["staff"]["id"])
+            .values(permissions=["staff:manage", "organisation:manage", "office_assignment:manage"])
+        )
+    await sign_in(client, people["staff"])
+    assert not (await client.get("/api/v1/auth/me")).json()["can_access_approval_inbox"]
+
+
+async def test_inbox_navigation_rechecks_effective_appointment(context, organisation, sessions):
+    from app.organisation.models import Department, Entity, Membership
+
+    client, _, _ = context
+    person = organisation["people"]["hod"]
+    await sign_in(client, person)
+    async with sessions() as s:
+        office = await s.scalar(select(Office).where(Office.identity_id == person["id"]))
+        office_id, dept_id, entity_id = office.id, office.department_id, office.entity_id
+        member = await s.scalar(select(Membership).where(Membership.identity_id == person["id"]))
+        member_id = member.id
+        other = await s.scalar(
+            select(Department).where(Department.entity_id == entity_id, Department.id != dept_id)
+        )
+        other_id = other.id
+    now = datetime.now(UTC)
+    changes = [
+        (Office, office_id, {"active": False}, {"active": True}),
+        (
+            Office,
+            office_id,
+            {"valid_until": now - timedelta(seconds=1), "valid_from": now - timedelta(days=1)},
+            {"valid_until": None},
+        ),
+        (
+            Office,
+            office_id,
+            {"valid_from": now + timedelta(days=1)},
+            {"valid_from": now - timedelta(days=1)},
+        ),
+        (Membership, member_id, {"active": False}, {"active": True}),
+        (Membership, member_id, {"department_id": other_id}, {"department_id": dept_id}),
+        (Department, dept_id, {"active": False}, {"active": True}),
+        (Entity, entity_id, {"active": False}, {"active": True}),
+    ]
+    for model, record_id, change, restore in changes:
+        async with sessions() as s, s.begin():
+            await s.execute(update(model).where(model.id == record_id).values(**change))
+        assert not (await client.get("/api/v1/auth/me")).json()["can_access_approval_inbox"], (
+            model,
+            change,
+        )
+        async with sessions() as s, s.begin():
+            await s.execute(update(model).where(model.id == record_id).values(**restore))
+        assert (await client.get("/api/v1/auth/me")).json()["can_access_approval_inbox"]
+    async with sessions() as s, s.begin():
+        await s.execute(
+            update(Account).where(Account.identity_id == person["id"]).values(read_only=True)
+        )
+    assert not (await client.get("/api/v1/auth/me")).json()["can_access_approval_inbox"]
