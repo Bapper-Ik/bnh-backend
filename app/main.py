@@ -2,12 +2,14 @@ from uuid import UUID
 
 from fastapi import FastAPI, Request
 
+from app.audit.router import router as audit_router
 from app.audit.service import AuditDetails, record_event
 from app.board.router import router as board_router
 from app.core.config import Settings, get_settings
 from app.core.errors import DomainError
 from app.evidence.router import router as evidence_router
 from app.evidence.storage import CloudinaryStorage
+from app.history.router import router as history_router
 from app.requisitions.router import approvals_router
 from app.requisitions.router import router as requisitions_router
 from app.vendor_app import create_app as create_runtime
@@ -20,6 +22,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(approvals_router)
     app.include_router(evidence_router)
     app.include_router(board_router)
+    app.include_router(history_router)
+    app.include_router(audit_router)
     cfg = settings or get_settings()
     app.state.evidence_storage = CloudinaryStorage(cfg)
     app.state.uploads_enabled = bool(
@@ -39,7 +43,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if "/attachments" in path
             else None
         )
-        if action and request.method not in {"GET", "HEAD"}:
+        if path.endswith("/history"):
+            action = "requisition.history_view.failure"
+        elif path == "/api/v1/audit-events":
+            action = "audit.search.failure"
+        if action and (
+            request.method not in {"GET", "HEAD"} or path.endswith(("/history", "/audit-events"))
+        ):
             async with app.state.sessions() as session, session.begin():
                 await record_event(
                     session,

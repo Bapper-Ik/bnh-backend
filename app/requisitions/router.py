@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -15,6 +16,7 @@ from app.core.database import Identity, get_session
 from app.core.errors import DomainError
 from app.evidence.models import Attachment
 from app.evidence.storage import Storage
+from app.history.filters import RequestFilters
 from app.identity.service import Actor, current_actor
 from app.organisation.models import Department, Entity
 from app.organisation.service import membership
@@ -51,6 +53,9 @@ class Summary(BaseModel):
     created_at: str
     requester_name: str
     required_authority: str | None
+    department_name: str = ""
+    entity_name: str = ""
+    vendor_name: str = ""
 
 
 class Page(BaseModel):
@@ -69,22 +74,20 @@ async def key_lock(s: AsyncSession, actor: Actor, key: UUID) -> None:
 
 @router.get("", response_model=Page)
 async def list_requests(
-    inbox: bool = False,
-    search: str = Query(default="", max_length=250),
-    state: str = Query(default="", max_length=40),
-    limit: int = Query(default=25, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    filters: Annotated[RequestFilters, Query()],
     actor: Actor = Depends(current_actor),
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> Page:
-    condition = request_scope(actor, inbox=inbox)
+    condition = request_scope(actor, inbox=filters.inbox)
     query = (
-        select(Requisition, Revision, Identity)
+        select(Requisition, Revision, Identity, Entity.name, Department.name)
         .outerjoin(Revision, Revision.id == Requisition.current_revision_id)
         .join(Identity, Identity.id == Requisition.requester_id)
+        .join(Entity, Entity.id == Requisition.entity_id)
+        .join(Department, Department.id == Requisition.department_id)
         .where(condition)
     )
-    if inbox:
+    if filters.inbox:
         query = query.where(
             Requisition.state.in_(
                 [
@@ -96,19 +99,34 @@ async def list_requests(
                 ]
             )
         )
-    if search:
+    if filters.search:
         query = query.where(
-            Requisition.reference.icontains(search, autoescape=True)
-            | Requisition.content["description"].astext.icontains(search, autoescape=True)
+            Requisition.reference.icontains(filters.search, autoescape=True)
+            | Requisition.content["description"].astext.icontains(filters.search, autoescape=True)
         )
-    if state:
-        query = query.where(Requisition.state == state)
+    if filters.state:
+        query = query.where(Requisition.state == filters.state)
+    for value, column in [
+        (filters.requester, func.coalesce(Revision.requester_name, Identity.display_name)),
+        (filters.company, func.coalesce(Revision.entity_name, Entity.name)),
+        (filters.department, func.coalesce(Revision.department_name, Department.name)),
+        (filters.vendor, Requisition.content["vendor"]["name"].astext),
+    ]:
+        if value:
+            query = query.where(column.icontains(value, autoescape=True))
+    if filters.my_requests:
+        query = query.where(Requisition.requester_id == actor.id)
+    lower, upper = filters.bounds()
+    if lower:
+        query = query.where(Requisition.created_at >= lower)
+    if upper:
+        query = query.where(Requisition.created_at < upper)
     count = await s.scalar(select(func.count()).select_from(query.subquery()))
     rows = (
         await s.execute(
             query.order_by(Requisition.created_at.desc(), Requisition.id.desc())
-            .offset(offset)
-            .limit(limit)
+            .offset(filters.offset)
+            .limit(filters.limit)
         )
     ).all()
     return Page(
@@ -122,12 +140,17 @@ async def list_requests(
                 created_at=r.created_at.isoformat(),
                 requester_name=rev.requester_name if rev else i.display_name,
                 required_authority=rev.authority if rev else None,
+                entity_name=rev.entity_name if rev else entity_name,
+                department_name=rev.department_name if rev else department_name,
+                vendor_name=str(r.content.get("vendor", {}).get("name", ""))
+                if isinstance(r.content.get("vendor"), dict)
+                else "",
             )
-            for r, rev, i in rows
+            for r, rev, i, entity_name, department_name in rows
         ],
         total=count or 0,
-        limit=limit,
-        offset=offset,
+        limit=filters.limit,
+        offset=filters.offset,
     )
 
 
@@ -563,18 +586,8 @@ async def act(
 
 @approvals_router.get("/inbox", response_model=Page)
 async def approval_inbox(
-    search: str = Query(default="", max_length=250),
-    limit: int = Query(default=25, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    filters: Annotated[RequestFilters, Query()],
     actor: Actor = Depends(current_actor),
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> Page:
-    return await list_requests(
-        inbox=True,
-        search=search,
-        state="",
-        limit=limit,
-        offset=offset,
-        actor=actor,
-        s=s,
-    )
+    return await list_requests(filters=filters.model_copy(update={"inbox": True}), actor=actor, s=s)

@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, TypeAdapter, field_validator, model_validator
 
 from app.authority.policy import calculate_lines, exact_decimal
+from app.history.schemas import NextAction
 from app.identity.schemas import Command
 
 
@@ -150,4 +151,5 @@ class RequestView(BaseModel):
     available_actions: list[str]
     revision_number: int
     redacted_fields: list[str] = Field(default_factory=list)
+    next_action: NextAction | None = None
     history: list[dict[str, object]]

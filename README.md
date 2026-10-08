@@ -4,7 +4,7 @@ FastAPI + PostgreSQL backend for BNH requisitions. Approval records represent au
 
 Development branch: `dev`. Each feature is verified, committed, and pushed before the next begins.
 
-The delivered assembly is `app.main:create_app`: runtime, accounts, organisation, scoped access, Vendors, staff administration and requisition creation/submission with private documents. Apply migrations through 0013. Individual approvals, the assigned inbox, returned-request correction and immutable revision/document viewing are delivered. The Board workspace records formal meeting outcomes with independent Secretary and Chairman signatures, correction history and conditional/deferred holds. See [Render setup](docs/render.md) for startup migrations and email configuration.
+The delivered assembly is `app.main:create_app`: runtime, accounts, organisation, scoped access, Vendors, staff administration and requisition creation/submission with private documents. Apply migrations through 0014. Individual approvals, the assigned inbox, returned-request correction and immutable revision/document viewing are delivered. The Board workspace records formal meeting outcomes with independent Secretary and Chairman signatures, correction history and conditional/deferred holds. See [Render setup](docs/render.md) for startup migrations and email configuration.
 
 ## Development setup
 
@@ -80,7 +80,7 @@ Migration 0010 adds activation state and durable email jobs. Email defaults off;
 
 `/api/v1/staff` supplies a protected searchable/paginated directory, account status, memberships and appointment history. The Svelte `/staff` screen uses server-authorised actions and versioned mutation endpoints. An administrator cannot change their own status, membership or appointments through this screen. Department changes require organisation:manage; appointments require office_assignment:manage. Account administration does not grant financial authority, and invitations grant no membership or permissions.
 
-The current release uses app.main and migrations through 0013; staff administration itself introduced no migration beyond 0010. Configure real companies/departments on Organisation & Authority (screen 12) before assigning membership. Email-disabled deployments explicitly show that invitations are unavailable; existing staff management remains usable. Endpoint details are in [integration notes](docs/ui_todos.md).
+The current release uses app.main and migrations through 0014; staff administration itself introduced no migration beyond 0010. Configure real companies/departments on Organisation & Authority (screen 12) before assigning membership. Email-disabled deployments explicitly show that invitations are unavailable; existing staff management remains usable. Endpoint details are in [integration notes](docs/ui_todos.md).
 
 
 ## Organisation & Authority (screen 12)
@@ -98,3 +98,16 @@ My Tasks includes the Secretary's recording/correction tasks and the Chairman's 
 The Secretary saves actual meeting details, uploads formal evidence and signs. The Chairman confirms that precise outcome or signs a return with a reason. APPROVE, REJECT, DEFER and CONDITIONAL_APPROVE retain distinct meanings. Conditional/deferred requests remain held during later recording and Chairman review; a later actual resolution needs both fresh signatures. Records returned to the Secretary create successor resolution versions without reopening the requisition.
 
 Schema `0013` protects submitted resolution rows and Chairman decisions against ordinary updates/deletes, and retains evidence digests and both signature records. The schema-owner trust boundary described above still applies. Audit and requisition notification intent commit atomically; email delivery of requisition notifications and protected external archiving remain separate work. Document malware scanning remains deferred by the owner.
+
+
+## Request history and Audit Log (HIS-001)
+
+Deploy the backend first; Docker startup applies migration `0014` (scoped audit/request indexes) before Uvicorn. Then deploy the frontend from `dev`. No new environment variables are needed. Existing Dockerfiles include the new code and migration.
+
+Requisitions and My Tasks support requester, department, company, vendor, status, inclusive Lagos creation dates and own-request filters. Details show the pending actor or assignment blocker and a paginated chronological timeline with signed-revision links. Board meeting dates, record creation and signatures are separate; Board record/evidence references remain restricted to the assigned eligible Secretary/Chairman. Export timestamps appear only when an actual export feature exists; none are fabricated here.
+
+Screen 13 is `/audit`. It requires explicit `audit:read` and applies existing request/evidence scope before filtering or counting. Technical administrators do not automatically receive audit or financial access. The screen shows safe action, actor identity/current name, time, outcome and permitted references, never raw audit JSON, storage credentials or signature strokes. Removed documents retain audit entries but no download link. Audit/history read-access events are recorded for the archive but excluded from the paginated activity feed to prevent reads from growing their own result set. Archive delivery remains separate work.
+
+For an authorised company-wide auditor, first provision and activate an individual staff account. A trusted configuration operator can run `python -m scripts.configure_audit_reviewer` in the backend environment and enter the existing email, company UUID and `grant`. The command grants `audit:read`, makes the account read-only, records the change and grants review only for that company. It rejects accounts with active financial appointments. Repeat for another explicitly authorised company if needed. Enter `revoke` to remove that company scope; the last scope removal also removes `audit:read`, and the account remains read-only. No production account is modified by deployment or tests. This controlled command is not a public API or a financial-role selector.
+
+Revocation takes effect on the next backend request. A review grant never grants confidential Board workspace/document access or unrestricted bank access. Paging uses a fixed upper audit timestamp; a refresh starts a new snapshot. General audit actor names follow current profiles; signed timeline names come from preserved evidence. See `docs/ui_todos.md` for API envelopes and filters.

@@ -1640,11 +1640,11 @@ Provide staff and authorised reviewers with request status, routing reasons, ver
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Screens 5/7/8/13 now provide scoped request filters, SQL-paginated actual-event history with immutable revision/signing references, pending actor/assignment blockers, and the restricted Audit Log with permitted request/document links. Migration 0014 adds scope/time indexes. Explicit audit capability does not expand request or private Board scope; both original Board appointments must remain eligible. Controlled operator setup grants/revokes company-scoped read-only reviewers. Verified on isolated local PostgreSQL: 251 backend tests, 6 UI unit tests, full 28 connected browser journeys plus all 5 affected Board/history journeys after the final access correction, static checks and production build. Desktop/mobile screenshots inspected. See docs/task_done.md and docs/ui_todos.md for evidence, contracts and limits.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** None for local implementation. Deployment and genuine staff acceptance remain separate checks.
 
 ### Requirement Basis
 
@@ -1681,7 +1681,7 @@ Request/revision references; current workflow state; blocked-action explanation;
 
 ### API and Interface Contract
 
-GET /requisitions with scoped filters; GET /requisitions/{uuid}/history; GET /requisitions/{uuid}/revisions/{revision}; restricted GET /audit-events. Use repository pagination/schema envelopes and field-level projections.
+GET /requisitions with scoped filters; GET /requisitions/{uuid}/history; GET /requisitions/{uuid}?revision={revision} (existing frozen-revision contract); restricted GET /audit-events. Use repository pagination/schema envelopes and field-level projections.
 
 ### Delivery Surface
 
@@ -1700,11 +1700,11 @@ Users understand the current status and authorised reviewers can reconstruct the
 
 ### Acceptance Criteria
 
-- [ ] History contains only actual events and preserves previous revisions after corrections.
-- [ ] Hidden records cannot be inferred from unscoped totals/search results.
-- [ ] Restricted attachments remain restricted even when their parent outcome is visible.
-- [ ] Meeting and sign-off timestamps are clearly distinguished.
-- [ ] History queries do not mutate signed records or audit events.
+- [x] History contains only actual events and preserves previous revisions after corrections.
+- [x] Hidden records cannot be inferred from unscoped totals/search results.
+- [x] Restricted attachments remain restricted even when their parent outcome is visible.
+- [x] Meeting and sign-off timestamps are clearly distinguished.
+- [x] History queries do not mutate signed records or audit events.
 
 ---
 

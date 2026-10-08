@@ -14,6 +14,7 @@ from pydantic import SecretStr
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from app.access.models import ReviewGrant
 from app.core.config import Settings
 from app.core.database import Identity, make_engine
 from app.identity.models import Account
@@ -64,6 +65,7 @@ async def prepare() -> Settings:
             "owner",
             "peer",
             "readonly",
+            "auditor",
             "access",
             "inviter",
             "admin",
@@ -90,8 +92,10 @@ async def prepare() -> Settings:
                     if role in {"admin", "admin_peer"}
                     else ["staff:manage"]
                     if role in {"access", "inviter"}
+                    else ["audit:read"]
+                    if role == "auditor"
                     else [],
-                    read_only=role == "readonly",
+                    read_only=role in {"readonly", "auditor"},
                 )
             )
             request_role = role in {
@@ -124,6 +128,10 @@ async def prepare() -> Settings:
                         valid_from=datetime.now(UTC),
                         authorisation_reference="Synthetic browser appointment",
                     )
+                )
+            if role == "auditor":
+                session.add(
+                    ReviewGrant(identity_id=identity.id, entity_id=request_entity.id, active=True)
                 )
             people.append({"role": role, "email": email})
         fixture = {

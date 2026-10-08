@@ -98,3 +98,12 @@ Cloudinary's account/security settings may restrict PDF delivery. Verify a real 
 Requisitions are routed and a durable notification intent is saved atomically. Email delivery for requisition events and the individual approval/Board workspaces remain later journeys. Account activation/reset emails continue through Resend.
 
 References: [Cloudinary upload parameters](https://cloudinary.com/documentation/upload_parameters), [private downloads](https://cloudinary.com/documentation/control_access_to_media).
+
+
+## HIS-001 history and Audit Log deployment
+
+Deploy the backend `dev` commit before the matching frontend. `scripts/start.sh` applies migration `0014` automatically using the same environment-specific `DATABASE_URL`, then starts Uvicorn. This migration adds indexes only; no new secrets or environment variables are required. Both existing Dockerfiles already include these files.
+
+Audit access is explicit. After activating a named reviewer, an authorised operator can run `python -m scripts.configure_audit_reviewer` in the backend service environment to grant or revoke a particular company UUID. Grant makes the account read-only and refuses active financial appointments. The last company revocation removes the audit capability and never restores write access. Company UUIDs are available from the protected organisation API. Do not use shared staff identities or grant audit visibility merely because someone administers the application.
+
+After deployment, check requester history/filter refresh, an approver's pending assignment, and the permitted reviewer's Audit Log and private-document viewer. Confirm ordinary staff cannot open `/audit` and ordinary requesters cannot open confidential Board evidence. Local synthetic browser checks are not proof of Render deployment or genuine staff acceptance.

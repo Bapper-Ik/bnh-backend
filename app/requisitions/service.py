@@ -229,60 +229,10 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
         except DomainError as exc:
             if exc.code != "RESOURCE_NOT_AVAILABLE":
                 decision_blocker = exc.message
-    history = []
-    revisions = (
-        await s.scalars(
-            select(Revision).where(Revision.requisition_id == req.id).order_by(Revision.number)
-        )
-    ).all()
-    for rev in revisions:
-        history.append(
-            {
-                "type": "submission",
-                "revision": rev.number,
-                "actor": rev.requester_name,
-                "at": rev.created_at.isoformat(),
-                "authority": rev.authority,
-                "digest": rev.content_digest,
-            }
-        )
-        decision = await s.scalar(select(Decision).where(Decision.revision_id == rev.id))
-        if decision:
-            signer = await s.get(Identity, decision.actor_id)
-            history.append(
-                {
-                    "type": decision.action,
-                    "revision": rev.number,
-                    "actor": decision.signature.get("name")
-                    or (signer.display_name if signer else "Staff"),
-                    "at": decision.created_at.isoformat(),
-                    "reason": decision.reason,
-                }
-            )
-    from app.board.models import ChairmanDecision, Resolution
+    from app.history.service import history_page, next_action
 
-    board_events = (
-        await s.execute(
-            select(Resolution, ChairmanDecision)
-            .join(Revision, Revision.id == Resolution.revision_id)
-            .join(ChairmanDecision, ChairmanDecision.resolution_id == Resolution.id)
-            .where(Revision.requisition_id == req.id)
-            .order_by(ChairmanDecision.created_at)
-        )
-    ).all()
-    for _resolution, board_decision in board_events:
-        if board_decision.action == "board_confirm":
-            history.append(
-                {
-                    "type": "board_" + board_decision.outcome.lower(),
-                    "revision": req.revision_number,
-                    "actor": board_decision.signature.get("name"),
-                    "at": board_decision.created_at.isoformat(),
-                    "reason": "Board outcome recorded. Unresolved conditions remain on hold."
-                    if board_decision.outcome == "CONDITIONAL_APPROVE"
-                    else "Board outcome confirmed.",
-                }
-            )
+    history = await history_page(s, req, actor)
+    pending = await next_action(s, req, revision)
     projected, redacted = project_content(req.content, actor)
     if (
         req.context.get("bank_details_state") == "restricted"
@@ -310,7 +260,8 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
         redacted_fields=redacted,
         available_actions=actions,
         revision_number=req.revision_number,
-        history=history,
+        history=[entry.model_dump(mode="json", exclude_none=True) for entry in history.items],
+        next_action=pending,
     )
 
 
@@ -422,6 +373,7 @@ async def revision_view(
             "submission_blocker": None,
             "decision_blocker": None,
             "viewing_revision": number,
+            "next_action": None,
             "revision_number": number,
             "state": state,
             "redacted_fields": redacted,
