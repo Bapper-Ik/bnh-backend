@@ -221,7 +221,7 @@ The following requiredness is a proposed v1 implementation rule [D-11], not infe
 | Scope           | Description of work/purchase, location, planned start, planned completion, payment terms, warranty/guarantee | Description and location required. Dates if supplied must be consistent. Payment terms may be specified or explicitly not yet agreed; warranty supports Not applicable. |
 | Cost lines      | Item description, quantity, unit price, line total, item order                                               | At least one line; quantity > 0; price >= 0; server calculation; final total >= ₦1.                                                                                     |
 | Currency/total  | currency=NGN, grand total, calculation/rounding version                                                      | Server-calculated from all commitment lines; reject unsupported currency and hidden client totals.                                                                      |
-| Documents       | Attachment identifiers, versions, original filenames, content hashes, access classification                  | Optional except required Board evidence; unscanned/invalid/unavailable files cannot be attached to a submitted version.                                                 |
+| Documents       | Attachment identifiers, versions, original filenames, content hashes, access classification                  | Optional except required Board evidence; invalid/unavailable files cannot be submitted. Malware scanning is deferred for this release by owner decision (2026-10-08).                                                 |
 | Declaration     | Accepted wording version, explicit consent, signature evidence reference                                     | Required on every submitted revision. An originator declaration is not financial approval.                                                                              |
 
 A payment account can be captured without creating a payment-processing capability. Show missing/unverified information honestly to the approver. Record differences between vendor and beneficiary names as visible information; do not infer wrongdoing or create an unapproved extra sign-off stage.
@@ -912,7 +912,7 @@ Authenticated requesters/approvers/Secretary/Chairman within scope; system stora
 ### Workflow
 
 1. Authorise a scoped upload and validate the allowed file kind, size, content, and filename.
-2. Quarantine unsafe/unscanned content; mark a file usable only after the configured validation path succeeds.
+2. Reject unsupported or invalid content; mark a file usable only after server-side type, size, content and filename validation and successful private storage. Malware scanning is deferred for this release; scanner availability is not a readiness or submission gate.
 3. Generate a server challenge for the exact signing intent and content digest.
 4. Require fresh authentication, explicit consent, signer confirmation, and the configured signature-capture method.
 5. Consume the challenge once as part of the business transaction and store immutable signing evidence.
@@ -929,7 +929,8 @@ Attachment UUID, scoped owner/resource, safe storage key and immutable object ve
 - No stored signature asset is automatically applied to future decisions. Every signing action requires explicit consent for its bound content.
 - An expired, reused, wrong-actor, wrong-action, or wrong-version challenge fails.
 - Do not accept a client-supplied content digest as proof of what was reviewed; recompute from the server snapshot.
-- No successful upload/security check is simulated when the configured production provider is unavailable. The affected evidence path stays blocked.
+- No successful upload/validation check is simulated when the configured private storage provider is unavailable. The affected evidence path stays blocked.
+- Release decision (owner, 2026-10-08): do not implement or deploy a document malware scanner in this release. Preserve private storage, scoped access, file type/size/content validation, safe download names, hashes and immutable submitted evidence. Record scanning as not performed; do not label files malware-free, scanned or virus-checked. Basic validation does not detect malware. A future scanning feature is deferred, not implemented or a release prerequisite.
 - Removing an unused draft attachment may detach it, but evidence referenced by a submitted version cannot be overwritten or removed.
 - File validation/signature-method limits are documented settings; do not invent legal certification claims.
 
@@ -958,7 +959,8 @@ Business workflows can collect private attachments and attributable signature ev
 ### Acceptance Criteria
 
 - [ ] Unauthorised download and upload-to-another-request attempts fail.
-- [ ] Unsafe or unsupported uploads are rejected/quarantined and cannot enter a signed submission.
+- [ ] Unsupported, oversized, malformed or unavailable uploads cannot enter a signed submission; valid privately stored files do not require malware scanning in this release.
+- [ ] Attachment state and UI copy distinguish completed basic validation from malware scanning, which is not performed in this release.
 - [ ] Signature replay, wrong actor, expired authentication, and altered request content fail.
 - [ ] An authorised signing action binds the intended version and a subsequent file replacement does not change it.
 - [ ] A missing signature-method approval is reported separately from completed staging implementation.
