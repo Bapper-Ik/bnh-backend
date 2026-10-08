@@ -176,3 +176,8 @@ The attachment component displays the filename once, truncates it with an ellips
 ## APR-001 — hide approval inbox for ordinary requesters (2026-10-08)
 
 `POST /auth/login` and `GET /auth/me` now include `can_access_approval_inbox`. Show My Tasks only when this server flag is true; ineligible visits to `/requisitions?inbox=true` redirect to `/requisitions`. The flag reflects an effective individual approval office, including active scope/account checks and HOD department alignment. It is independent of queue size, so an eligible approver retains an empty inbox; ordinary staff, technical administrators without an approval appointment and read-only reviewers do not see it. Refresh `/auth/me` after appointment changes. This is a navigation hint, not approval permission. No migration/settings change; deploy the backend before the frontend and refresh old tabs.
+
+
+## REQ-001 — aligned vendor lookup (2026-10-08)
+
+The shared Create / Edit Requisition form now places Find an existing vendor and a compact Search vendors button on one desktop row. Narrow screens put the button beneath the input, aligned right. Matching vendors and manual-entry actions are left-aligned, with wrapping for long names and a divider before captured details. Existing lookup, selection, saved vendor snapshots and request APIs are unchanged. Deploy the frontend and refresh existing tabs; no migration or configuration is needed for this layout adjustment.
