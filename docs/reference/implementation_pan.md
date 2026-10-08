@@ -1096,6 +1096,8 @@ Allow a requester to create, resume, and update a draft containing the supplied 
 
 **Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
 
+**Reported issue (open, 2026-10-08):** The owner reports saved drafts disappearing after refresh. Read-only diagnostics on the originally supplied development database found migration 0011, a persisted DRAFT and its creation/update audit events. Isolated browser verification of list/detail refresh, reopening, editing and a fresh login passed, alongside the thirteen requisition-creation integration tests. The reported path has not been reproduced; no application persistence fix or deployed resolution is claimed. Confirm whether disappearance means an absent list row, cleared saved fields, or remaining on the new-request form after saving before changing behavior.
+
 ### Requirement Basis
 
 [F] Requisition header and Sections A–C; [C] replacement approval policy; [D-01–04, D-11] capture and validation choices.

@@ -134,3 +134,8 @@ The committed assembly is `app.main:create_app` with migration 0011. `/requisiti
 - `GET /attachments/{id}/content`: scoped, digest-checked bytes, no-store, nosniff, attachment filename and sandbox policy; the UI opens a document viewer with download. `DELETE /attachments/{id}?expected_version=` detaches unused draft evidence; frozen evidence cannot be removed or changed. Database metadata triggers supplement application checks but do not constrain a schema owner who can alter them.
 
 Cloudinary is owner-selected. Configure backend-only `CLOUDINARY_URL` or the three separate Cloudinary credentials; the deployment guide explains authenticated raw storage and private downloads. Missing storage blocks uploads, not saving/submitting requests without optional evidence. Provider availability and real private PDF delivery remain deployed checks; local fixture success is not Cloudinary account verification. No malware scanner is implemented.
+
+
+## REQ-001 — reported draft refresh issue (open, 2026-10-08)
+
+The saved-draft persistence report remains under investigation. A new real-backend browser regression saves a named draft, refreshes the list with a Draft filter, reopens and edits it, refreshes the details, and signs in through a fresh browser context to retrieve the same record and values. That path and the thirteen requisition-creation integration tests pass on isolated PostgreSQL. A read-only check of the original development database found a DRAFT and its creation/update audit events. No business data was changed. Obtain the failing navigation/refresh path before attributing the report to persistence, filtering or form validation; none is established as the cause. No product fix or live resolution is claimed.
