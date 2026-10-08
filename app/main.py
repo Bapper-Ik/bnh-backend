@@ -7,13 +7,16 @@ from app.core.config import Settings, get_settings
 from app.core.errors import DomainError
 from app.evidence.router import router as evidence_router
 from app.evidence.storage import CloudinaryStorage
+from app.requisitions.router import approvals_router
 from app.requisitions.router import router as requisitions_router
 from app.vendor_app import create_app as create_runtime
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     app = create_runtime(settings)
+    app.state.individual_decisions_enabled = True
     app.include_router(requisitions_router)
+    app.include_router(approvals_router)
     app.include_router(evidence_router)
     cfg = settings or get_settings()
     app.state.evidence_storage = CloudinaryStorage(cfg)

@@ -29,6 +29,9 @@ class Requisition(Record, Base):
     content: Mapped[dict[str, object]] = mapped_column(JSONB)
     context: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict, server_default="{}")
     total: Mapped[Decimal] = mapped_column(Numeric(17, 2))
+    excluded_attachment_ids: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default="[]"
+    )
     current_revision_id: Mapped[UUID | None]
     revision_number: Mapped[int] = mapped_column(default=0, server_default="0")
 

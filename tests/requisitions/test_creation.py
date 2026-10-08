@@ -221,7 +221,7 @@ async def test_documents_signed_manifest_private_access_and_outbox(context, orga
             f"/api/v1/requisitions/{req['id']}/signing-challenges",
             json={"expected_version": submitted["version"], "action": "approve"},
         )
-    ).status_code == 403
+    ).status_code == 201
 
 
 async def test_document_validation_unavailable_storage_and_stale_challenge(context, organisation):

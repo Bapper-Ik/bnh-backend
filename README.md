@@ -4,7 +4,7 @@ FastAPI + PostgreSQL backend for BNH requisitions. Approval records represent au
 
 Development branch: `dev`. Each feature is verified, committed, and pushed before the next begins.
 
-The delivered assembly is `app.main:create_app`: runtime, accounts, organisation, scoped access, Vendors, staff administration and requisition creation/submission with private documents. Apply migrations through 0011. Individual approval actions and Board workspaces remain subsequent journeys. See [Render setup](docs/render.md) for startup migrations and email configuration.
+The delivered assembly is `app.main:create_app`: runtime, accounts, organisation, scoped access, Vendors, staff administration and requisition creation/submission with private documents. Apply migrations through 0012. Individual approvals, the assigned inbox, returned-request correction and immutable revision/document viewing are delivered. Board workspaces remain a subsequent journey. See [Render setup](docs/render.md) for startup migrations and email configuration.
 
 ## Development setup
 
@@ -80,7 +80,7 @@ Migration 0010 adds activation state and durable email jobs. Email defaults off;
 
 `/api/v1/staff` supplies a protected searchable/paginated directory, account status, memberships and appointment history. The Svelte `/staff` screen uses server-authorised actions and versioned mutation endpoints. An administrator cannot change their own status, membership or appointments through this screen. Department changes require organisation:manage; appointments require office_assignment:manage. Account administration does not grant financial authority, and invitations grant no membership or permissions.
 
-Use the same vendor_app assembly and existing migration 0010; this feature requires no new schema migration. Configure real companies/departments on Organisation & Authority (screen 12) before assigning membership. Email-disabled deployments explicitly show that invitations are unavailable; existing staff management remains usable. Endpoint details are in [integration notes](docs/ui_todos.md).
+The current release uses app.main and migrations through 0012; staff administration itself introduced no migration beyond 0010. Configure real companies/departments on Organisation & Authority (screen 12) before assigning membership. Email-disabled deployments explicitly show that invitations are unavailable; existing staff management remains usable. Endpoint details are in [integration notes](docs/ui_todos.md).
 
 
 ## Organisation & Authority (screen 12)

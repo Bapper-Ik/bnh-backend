@@ -2,13 +2,14 @@ from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID
 
-from sqlalchemy import and_, exists, false, or_, select
+from sqlalchemy import and_, exists, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.access.models import ReviewGrant
 from app.core.errors import DomainError
 from app.evidence.models import Attachment
+from app.identity.models import Account
 from app.identity.service import Actor
 from app.organisation.models import Department, Entity, Membership, Office
 from app.organisation.service import active_offices, membership, officeholder
@@ -17,6 +18,7 @@ from app.requisitions.models import Requisition, Revision
 Action = Literal[
     "read",
     "edit",
+    "revise",
     "submit",
     "approve",
     "reject",
@@ -42,6 +44,8 @@ def request_scope(actor: Actor, *, inbox: bool = False) -> ColumnElement[bool]:
             .join(Department, Department.id == Membership.department_id)
             .join(Entity, Entity.id == Office.entity_id)
             .where(
+                Requisition.state != "DRAFT",
+                Requisition.requester_id != actor.id,
                 Office.identity_id == actor.id,
                 Office.entity_id == Requisition.entity_id,
                 Office.active.is_(True),
@@ -67,8 +71,37 @@ def request_scope(actor: Actor, *, inbox: bool = False) -> ColumnElement[bool]:
         else false()
     )
     if inbox:
+        eligible_count = (
+            select(func.count(Office.id))
+            .join(Account, Account.identity_id == Office.identity_id)
+            .join(
+                Membership,
+                (Membership.identity_id == Office.identity_id)
+                & (Membership.entity_id == Office.entity_id),
+            )
+            .join(Department, Department.id == Membership.department_id)
+            .join(Entity, Entity.id == Office.entity_id)
+            .where(
+                Office.entity_id == Requisition.entity_id,
+                Office.role == Revision.authority,
+                or_(Office.role != "hod", Office.department_id == Requisition.department_id),
+                or_(Office.role != "hod", Office.department_id == Membership.department_id),
+                Office.active.is_(True),
+                Office.valid_from <= now,
+                or_(Office.valid_until.is_(None), Office.valid_until > now),
+                Account.active.is_(True),
+                Account.read_only.is_(False),
+                Account.password_pending.is_(False),
+                Membership.active.is_(True),
+                Department.active.is_(True),
+                Entity.active.is_(True),
+            )
+            .correlate(Requisition, Revision)
+            .scalar_subquery()
+        )
         return and_(
             offices,
+            or_(Revision.authority == "board", eligible_count == 1),
             Requisition.state.in_(
                 ["PENDING_AUTHORITY", "AWAITING_BOARD_RESOLUTION", "AWAITING_CHAIRMAN_SIGNOFF"]
             ),
@@ -122,8 +155,9 @@ async def require_action(
         raise DomainError(
             "ACCESS_DENIED", "Read-only reviewers cannot change or sign records.", 403
         )
-    if action in {"edit", "submit", "attachment_upload"}:
-        if req.requester_id == actor.id and req.state in {"DRAFT", "RETURNED_FOR_REVISION"}:
+    if action in {"edit", "submit", "attachment_upload", "revise"}:
+        allowed_state = "RETURNED_FOR_REVISION" if action == "revise" else "DRAFT"
+        if req.requester_id == actor.id and req.state == allowed_state:
             current = await membership(session, actor.id, req.entity_id)
             if current.department_id == req.department_id:
                 return

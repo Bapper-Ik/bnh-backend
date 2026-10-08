@@ -4,7 +4,7 @@ Generated from the shared workspace docs. Do not maintain a second tracker here.
 
 Regenerate from the paired workspace with python3 scripts/sync_requirements.py in bnh-backend.
 
-- implementation_pan.md: 7832b9a57f360259a70e9594b7c963f226079af60cdf4211f8120dce881f3134
+- implementation_pan.md: ca4608d6acf84deaec43b6489acba49c67474083a1cbaa00dd724d46be5674b0
 - features.md: 574883f93edba374c7bf7e8a29c8859269c9580c7b3f38e79f0643d097ae0e28
 - recap.md: 0a97c9ae34c560d72bf804add1e94dac63736d9f5327661af86381a155afd177
 - ui_scrrens.md: a7814645c7460a4ac02f250e75f17d69f1fd446316e16e30c7c1c72e444f99be

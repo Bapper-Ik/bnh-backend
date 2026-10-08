@@ -117,7 +117,6 @@ async def signed(client, req, person, action, reason=""):
 @pytest.fixture
 async def client(settings):
     app = create_app(settings)
-    app.state.individual_decisions_enabled = True
     async with app.router.lifespan_context(app):
         async with AsyncClient(
             transport=ASGITransport(app),
@@ -164,6 +163,12 @@ async def test_returned_request_recalculates_route_and_preserves_history(client,
     await sign_in(client, people["hod"])
     req, _ = await signed(client, req, people["hod"], "return", "Please include delivery.")
     await sign_in(client, people["staff"])
+    req = (
+        await client.post(
+            f"/api/v1/requisitions/{req['id']}/revisions",
+            json={"expected_version": req["version"], "idempotency_key": str(uuid4())},
+        )
+    ).json()
     r = await client.put(
         f"/api/v1/requisitions/{req['id']}/draft",
         json={"expected_version": req["version"], "content": content("8000000")},

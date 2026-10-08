@@ -1273,11 +1273,11 @@ Provide the three individual authorities with a scoped inbox and transaction-bou
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Delivered the individual approval journey for screens 6–8 (2026-10-08): a scoped/searchable/paginated My Tasks inbox; signed approve/reject/return actions on the existing details screen; reasons bound to rejection/return signatures; current-office and identity checks; atomic decision/audit/outbox commits; and idempotent retries. Explicit Start correction creates the next working draft while prior signed revisions and documents remain viewable and immutable. Excluding an earlier attachment changes only the successor draft; resubmission captures a fresh signature and recalculates the direct route. Migration 0012 stores these attachment exclusions. The release factory enables individual decisions; Board decisions remain separate. Full paired verification passed 224 backend tests, six frontend unit tests and all 22 real-backend browser journeys, plus configured lint/format/type/build checks. After the final correction-retry refinement and screenshot synchronization, 41 requisition/access tests and five approval browser journeys passed again. Desktop inbox/detail and 390px detail layouts were inspected. Exact publication is recorded by the APR-001 commits on origin/dev.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** No local implementation blocker. Render deployment, live provider behavior and BNH signature-method acceptance remain separate checks. Notification delivery and Board workflows are outside this gate; durable notification intent is recorded.
 
 ### Requirement Basis
 
@@ -1317,7 +1317,7 @@ Request UUID/submitted revision/expected version; actor and current appointment;
 
 ### API and Interface Contract
 
-GET /approvals/inbox; POST /requisitions/{uuid}/decisions with approve|reject|return and version/challenge/idempotency fields; POST /requisitions/{uuid}/revisions for an authorised returned state; reuse draft/submit contracts for the successor. Exclude Board-level decisions from the individual decision route.
+GET /approvals/inbox; POST /requisitions/{uuid}/actions with approve|reject|return and version/challenge/idempotency fields; POST /requisitions/{uuid}/revisions with expected_version and idempotency_key for an authorised returned state; GET /requisitions/{uuid}?revision=N and its attachments?revision=N expose the frozen historical view; reuse draft/submit contracts for the successor. Exclude Board-level decisions from the individual decision route.
 
 ### Delivery Surface
 
@@ -1338,12 +1338,12 @@ Individual decisions are authorised, signed, and immutable; corrections receive 
 
 ### Acceptance Criteria
 
-- [ ] Correct authority succeeds; wrong department, wrong band, self, inactive officeholder, and stale role fail.
-- [ ] Rejection/return without a reason fails.
-- [ ] Only one of two conflicting concurrent decisions commits.
-- [ ] Identical retries return the original decision without another signature/event.
-- [ ] A returned request crossing a threshold goes to the new correct authority with a fresh signed revision.
-- [ ] An approved/rejected revision cannot be silently reopened or rewritten.
+- [x] Correct authority succeeds; wrong department, wrong band, self, inactive officeholder, and stale role fail.
+- [x] Rejection/return without a reason fails.
+- [x] Only one of two conflicting concurrent decisions commits.
+- [x] Identical retries return the original decision without another signature/event.
+- [x] A returned request crossing a threshold goes to the new correct authority with a fresh signed revision.
+- [x] An approved/rejected revision cannot be silently reopened or rewritten.
 
 ---
 
@@ -2004,7 +2004,7 @@ Deliver the complete self-service browser journey for staff to prepare, sign, su
 
 **Status:** In Progress
 
-**Implementation Evidence:** The creation/submission portion of screens 5–7 is delivered: scoped list, reusable create/edit form, vendor lookup, exact totals, route preview, private attachment viewer, keyboard/pointer signing controls and submission history. Three new real-PostgreSQL browser journeys pass alongside twelve earlier journeys, including staff-to-HOD and low-value MD-to-Board paths, stale edits, cancellation, restricted links and session expiry. Desktop and 390px layouts were inspected. Dashboard, returned-request browser workflow and exports remain unfinished; this overall feature remains In Progress. Exact staged release passed Ruff/format/mypy, 208 backend tests on fresh local PostgreSQL, frontend lint/format/types, six unit tests, production build and all fifteen browser journeys (2026-10-08). Publication is recorded by the feature commits on origin/dev.
+**Implementation Evidence:** The creation/submission portion of screens 5–7 is delivered: scoped list, reusable create/edit form, vendor lookup, exact totals, route preview, private attachment viewer, keyboard/pointer signing controls and submission history. Three new real-PostgreSQL browser journeys pass alongside twelve earlier journeys, including staff-to-HOD and low-value MD-to-Board paths, stale edits, cancellation, restricted links and session expiry. Desktop and 390px layouts were inspected. The APR-001 follow-up now delivers returned-request correction and historical revision viewing; dashboard and exports remain unfinished; this overall feature remains In Progress. Exact staged release passed Ruff/format/mypy, 208 backend tests on fresh local PostgreSQL, frontend lint/format/types, six unit tests, production build and all fifteen browser journeys (2026-10-08). Publication is recorded by the feature commits on origin/dev.
 
 **Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
 
@@ -2063,7 +2063,7 @@ A real staff member can complete the requester journey independently on their ow
 ### Acceptance Criteria
 
 - [x] Browser test creates a draft, reloads it, signs/submits, and observes the correct next actor.
-- [ ] A returned request is corrected and rerouted when its amount crosses a threshold.
+- [x] A returned request is corrected and rerouted when its amount crosses a threshold.
 - [ ] Unsafe attachment and invalid field errors are comprehensible and preserve safe draft work.
 - [ ] Signature capture is usable by mouse/touch and supports the approved accessibility alternative when configured.
 - [x] No request succeeds merely through local state without a successful backend transition.
@@ -2083,11 +2083,11 @@ Deliver the role-specific browser actions for direct approval and the selected f
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** In Progress
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** The individual-approver portion is delivered under APR-001: screen 8 My Tasks, signed decisions on screen 7, and correction/resubmission on screen 6. Five new browser journeys verify all three individual authority levels, changed-band resubmission with preserved documents, competing decisions and expired sessions. The full browser suite passes 22 journeys. Secretary/Chairman workspace, Board outcomes and reviewer/export completion remain unfinished; this combined feature is not complete.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** Board and remaining reviewer workflows retain later feature gates.
 
 ### Requirement Basis
 
@@ -2143,7 +2143,7 @@ Each selected role can perform only its own real, signed workflow actions indepe
 
 ### Acceptance Criteria
 
-- [ ] Browser tests cover direct approval and return/revision with separate real test identities.
+- [x] Browser tests cover direct approval and return/revision with separate real test identities.
 - [ ] A Secretary and different Chairman complete the Board workflow; single-person completion fails.
 - [ ] Confirmed Board rejection/deferment/conditions are displayed accurately rather than as approval.
 - [ ] Wrong role, missing evidence, stale version, self-approval, and insufficient scope produce clear denied actions.

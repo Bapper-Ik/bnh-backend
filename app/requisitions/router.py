@@ -25,6 +25,7 @@ from app.requisitions.schemas import (
     Intent,
     RequestView,
     SignedAction,
+    StartRevision,
     UpdateRequest,
 )
 from app.requisitions.service import (
@@ -32,11 +33,13 @@ from app.requisitions.service import (
     authorise_intent,
     content_digest,
     present,
+    revision_view,
     select_vendor,
     total_for,
 )
 
 router = APIRouter(prefix="/api/v1/requisitions", tags=["Requisitions"])
+approvals_router = APIRouter(prefix="/api/v1/approvals", tags=["Approvals"])
 
 
 class Summary(BaseModel):
@@ -173,10 +176,76 @@ async def create(
 @router.get("/{request_id}", response_model=RequestView)
 async def detail(
     request_id: UUID,
+    revision: int | None = Query(default=None, ge=1),
     actor: Actor = Depends(current_actor),
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> RequestView:
-    return await present(s, await get_request(s, request_id, actor), actor)
+    req = await get_request(s, request_id, actor)
+    return (
+        await revision_view(s, req, actor, revision) if revision else await present(s, req, actor)
+    )
+
+
+@router.post("/{request_id}/revisions", response_model=RequestView)
+async def start_revision(
+    request_id: UUID,
+    body: StartRevision,
+    actor: Actor = Depends(current_actor),
+    s: AsyncSession = Depends(get_session, scope="function"),
+) -> RequestView:
+    await key_lock(s, actor, body.idempotency_key)
+    req = await get_request(s, request_id, actor)
+    payload = content_digest(
+        {
+            "operation": "start_revision",
+            "request_id": str(req.id),
+            "command": body.model_dump(mode="json"),
+        }
+    )
+    cached = await s.scalar(
+        select(CommandResult).where(
+            CommandResult.actor_id == actor.id,
+            CommandResult.idempotency_key == body.idempotency_key,
+        )
+    )
+    if cached:
+        if cached.payload_digest != payload:
+            raise DomainError("IDEMPOTENCY_CONFLICT", "This key was used for a different action.")
+        result = RequestView.model_validate(cached.result)
+        content, redacted = project_content(result.content.model_dump(mode="json"), actor)
+        return result.model_copy(
+            update={
+                "content": result.content.model_validate(content),
+                "redacted_fields": sorted(set(result.redacted_fields + redacted)),
+                "available_actions": [],
+            }
+        )
+    await require_action(s, req, actor, "revise")
+    if req.version != body.expected_version:
+        raise DomainError(
+            "REVISION_CONFLICT", "This request changed. Reload before starting a correction."
+        )
+    req.state = "DRAFT"
+    req.version += 1
+    await record_event(
+        s,
+        action="requisition.revision_created",
+        actor_id=actor.id,
+        resource_id=req.id,
+        entity_id=req.entity_id,
+        details=AuditDetails(revision_id=req.current_revision_id),
+    )
+    result = await present(s, req, actor)
+    s.add(
+        CommandResult(
+            actor_id=actor.id,
+            idempotency_key=body.idempotency_key,
+            payload_digest=payload,
+            resource_id=req.id,
+            result=result.model_dump(mode="json"),
+        )
+    )
+    return result
 
 
 @router.put("/{request_id}/draft", response_model=RequestView)
@@ -188,9 +257,9 @@ async def update(
 ) -> RequestView:
     req = await get_request(s, request_id, actor)
     await require_action(s, req, actor, "edit")
-    if req.requester_id != actor.id or req.state not in {"DRAFT", "RETURNED_FOR_REVISION"}:
+    if req.requester_id != actor.id or req.state != "DRAFT":
         raise DomainError(
-            "INVALID_STATE_TRANSITION", "Only your draft or returned request can be edited."
+            "INVALID_STATE_TRANSITION", "Start a correction before editing a returned request."
         )
     if req.version != body.expected_version:
         raise DomainError("REVISION_CONFLICT", "A newer version exists. Reload before editing.")
@@ -361,13 +430,15 @@ async def act(
                     Attachment.requisition_id == req.id,
                     Attachment.kind == "request_support",
                     Attachment.detached.is_(False),
+                    Attachment.id.not_in([UUID(x) for x in req.excluded_attachment_ids]),
                 )
             )
         ).all()
         storage: Storage = request.app.state.evidence_storage
         for file in files:
             await storage.get(file.storage_key, file.digest, file.byte_size)
-            file.frozen = True
+            if not file.frozen:
+                file.frozen = True
         # Provider reads may take time; eligibility and freshness must still hold now.
         checked_at = datetime.now(UTC)
         if (
@@ -408,7 +479,7 @@ async def act(
         req.state = (
             "AWAITING_BOARD_RESOLUTION" if revision.authority == "board" else "PENDING_AUTHORITY"
         )
-        event = "requisition.submitted"
+        event = "requisition.resubmitted" if req.revision_number > 1 else "requisition.submitted"
     else:
         assert req.current_revision_id
         s.add(
@@ -482,3 +553,22 @@ async def act(
     )
     await s.flush()
     return result
+
+
+@approvals_router.get("/inbox", response_model=Page)
+async def approval_inbox(
+    search: str = Query(default="", max_length=250),
+    limit: int = Query(default=25, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    actor: Actor = Depends(current_actor),
+    s: AsyncSession = Depends(get_session, scope="function"),
+) -> Page:
+    return await list_requests(
+        inbox=True,
+        search=search,
+        state="PENDING_AUTHORITY",
+        limit=limit,
+        offset=offset,
+        actor=actor,
+        s=s,
+    )

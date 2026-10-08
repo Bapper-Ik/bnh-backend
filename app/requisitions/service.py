@@ -48,9 +48,10 @@ async def authorise_intent(
         raise DomainError(
             "REVISION_CONFLICT", "This request has changed. Reload and review it again."
         )
+    requester_name = actor.identity.display_name
     route_data: dict[str, object] = {}
     if intent.action == "submit":
-        if req.requester_id != actor.id or req.state not in {"DRAFT", "RETURNED_FOR_REVISION"}:
+        if req.requester_id != actor.id or req.state != "DRAFT":
             raise DomainError("INVALID_STATE_TRANSITION", "This request cannot be submitted.")
         member = await membership(s, actor.id, req.entity_id)
         if member.department_id != req.department_id:
@@ -125,6 +126,7 @@ async def authorise_intent(
             )
         revision = await s.get(Revision, req.current_revision_id)
         assert revision
+        requester_name = revision.requester_name
         current = await officeholder(s, req.entity_id, revision.authority, req.department_id)
         if req.requester_id == actor.id:
             raise DomainError(
@@ -138,6 +140,13 @@ async def authorise_intent(
             raise DomainError(
                 "VALIDATION_FAILED", "Explain why you are rejecting or returning this request.", 422
             )
+        route_data = {
+            "authority": revision.authority,
+            "approver_id": str(revision.approver_id),
+            "appointment_id": str(current.id),
+            "policy_version": revision.policy_version,
+            "explanation": revision.routing_explanation,
+        }
     entity = await s.get(Entity, req.entity_id)
     department = await s.get(Department, req.department_id)
     assert entity and department
@@ -155,7 +164,7 @@ async def authorise_intent(
         "content": req.content,
         "total": format(req.total, ".2f"),
         "route": route_data,
-        "requester_name": actor.identity.display_name,
+        "requester_name": requester_name,
         "context": req.context,
         "attachments": await attachment_manifest(s, req),
         "declaration": DECLARATION if intent.action == "submit" else intent.action,
@@ -173,7 +182,8 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
     blocker = None
     authority = revision.authority if revision else None
     explanation = revision.routing_explanation if revision else None
-    if req.requester_id == actor.id and req.state in {"DRAFT", "RETURNED_FOR_REVISION"}:
+    decision_blocker = None
+    if req.requester_id == actor.id and req.state == "DRAFT":
         try:
             await require_action(s, req, actor, "edit")
             actions = ["edit", "submit"]
@@ -191,6 +201,25 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
             )
         except (DomainError, ValueError) as exc:
             blocker = exc.message if isinstance(exc, DomainError) else str(exc)
+    if req.requester_id == actor.id and req.state == "RETURNED_FOR_REVISION":
+        try:
+            await require_action(s, req, actor, "revise")
+            actions = ["revise"]
+        except DomainError as exc:
+            decision_blocker = exc.message
+    if req.state == "PENDING_AUTHORITY" and revision:
+        try:
+            current = await officeholder(s, req.entity_id, revision.authority, req.department_id)
+            if current.identity_id != revision.approver_id:
+                raise DomainError(
+                    "AUTHORITY_ASSIGNMENT_BLOCKED",
+                    "The assigned approver no longer holds the required office. Contact your administrator.",
+                )
+            if revision.approver_id == actor.id:
+                await require_action(s, req, actor, "approve")
+                actions = ["approve", "reject", "return"]
+        except DomainError as exc:
+            decision_blocker = exc.message
     history = []
     revisions = (
         await s.scalars(
@@ -215,7 +244,8 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
                 {
                     "type": decision.action,
                     "revision": rev.number,
-                    "actor": signer.display_name if signer else "Staff",
+                    "actor": decision.signature.get("name")
+                    or (signer.display_name if signer else "Staff"),
                     "at": decision.created_at.isoformat(),
                     "reason": decision.reason,
                 }
@@ -242,6 +272,7 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
         required_authority=authority,
         routing_explanation=explanation,
         submission_blocker=blocker,
+        decision_blocker=decision_blocker,
         content=Content.model_validate(projected),
         redacted_fields=redacted,
         available_actions=actions,
@@ -294,6 +325,7 @@ async def attachment_manifest(s: AsyncSession, req: Requisition) -> list[dict[st
                 Attachment.requisition_id == req.id,
                 Attachment.kind == "request_support",
                 Attachment.detached.is_(False),
+                Attachment.id.not_in([UUID(x) for x in req.excluded_attachment_ids]),
             )
             .order_by(Attachment.id)
         )
@@ -313,3 +345,50 @@ async def attachment_manifest(s: AsyncSession, req: Requisition) -> list[dict[st
         }
         for f in files
     ]
+
+
+async def get_revision(s: AsyncSession, req: Requisition, number: int) -> Revision:
+    revision = await s.scalar(
+        select(Revision).where(Revision.requisition_id == req.id, Revision.number == number)
+    )
+    if not revision:
+        raise DomainError("RESOURCE_NOT_AVAILABLE", "Submitted revision not found.", 404)
+    return revision
+
+
+async def revision_view(
+    s: AsyncSession, req: Requisition, actor: Actor, number: int
+) -> RequestView:
+    revision = await get_revision(s, req, number)
+    result = await present(s, req, actor)
+    projected, redacted = project_content(revision.content, actor)
+    decision = await s.scalar(select(Decision).where(Decision.revision_id == revision.id))
+    state = {"approve": "APPROVED", "reject": "REJECTED", "return": "RETURNED_FOR_REVISION"}.get(
+        decision.action if decision else "",
+        "AWAITING_BOARD_RESOLUTION" if revision.authority == "board" else "PENDING_AUTHORITY",
+    )
+    context = revision.context.get("context", {})
+    if (
+        isinstance(context, dict)
+        and context.get("bank_details_state") == "restricted"
+        and "vendor.bank_details" not in redacted
+    ):
+        redacted.append("vendor.bank_details")
+    return result.model_copy(
+        update={
+            "content": Content.model_validate(projected),
+            "total": format(revision.total, ".2f"),
+            "requester_name": revision.requester_name,
+            "entity_name": revision.entity_name,
+            "department_name": revision.department_name,
+            "required_authority": revision.authority,
+            "routing_explanation": revision.routing_explanation,
+            "available_actions": [],
+            "submission_blocker": None,
+            "decision_blocker": None,
+            "viewing_revision": number,
+            "revision_number": number,
+            "state": state,
+            "redacted_fields": redacted,
+        }
+    )

@@ -18,6 +18,7 @@ from app.evidence.models import Attachment
 from app.evidence.storage import Storage
 from app.evidence.validation import validate
 from app.identity.service import Actor, current_actor
+from app.requisitions.service import get_revision
 
 router = APIRouter(prefix="/api/v1", tags=["Private documents"])
 
@@ -55,10 +56,12 @@ class AttachmentPage(BaseModel):
 async def listing(
     request_id: UUID,
     request: Request,
+    revision: int | None = Query(default=None, ge=1),
     actor: Actor = Depends(current_actor),
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> AttachmentPage:
     req = await get_scoped_request(s, request_id, actor)
+    snapshot = await get_revision(s, req, revision) if revision else None
     files = (
         await s.scalars(
             select(Attachment)
@@ -70,6 +73,16 @@ async def listing(
             .order_by(Attachment.created_at, Attachment.id)
         )
     ).all()
+    if snapshot:
+        manifest = snapshot.context.get("attachments", [])
+        ids = (
+            {str(item["id"]) for item in manifest if isinstance(item, dict)}
+            if isinstance(manifest, list)
+            else set()
+        )
+        files = [file for file in files if str(file.id) in ids]
+    else:
+        files = [file for file in files if str(file.id) not in req.excluded_attachment_ids]
     cfg = request.app.state.settings
     return AttachmentPage(
         items=[view(f) for f in files],
@@ -134,7 +147,11 @@ async def upload(
     count = await s.scalar(
         select(func.count())
         .select_from(Attachment)
-        .where(Attachment.requisition_id == req.id, Attachment.detached.is_(False))
+        .where(
+            Attachment.requisition_id == req.id,
+            Attachment.detached.is_(False),
+            Attachment.id.not_in([UUID(x) for x in req.excluded_attachment_ids]),
+        )
     )
     if (count or 0) >= request.app.state.settings.attachment_max_count:
         raise DomainError("VALIDATION_FAILED", "The request has reached its attachment limit.", 422)
@@ -179,13 +196,16 @@ async def detach(
     file = await require_attachment(s, attachment_id, actor)
     req = await get_scoped_request(s, file.requisition_id, actor)
     await require_action(s, req, actor, "attachment_upload")
-    if file.frozen or file.kind != "request_support":
+    if (file.frozen and not req.current_revision_id) or file.kind != "request_support":
         raise DomainError("INVALID_STATE_TRANSITION", "Submitted evidence cannot be removed.")
     if req.version != expected_version:
         raise DomainError(
             "REVISION_CONFLICT", "The request changed. Reload before removing a document."
         )
-    file.detached = True
+    if file.frozen:
+        req.excluded_attachment_ids = sorted(set(req.excluded_attachment_ids + [str(file.id)]))
+    else:
+        file.detached = True
     req.version += 1
     await record_event(
         s,

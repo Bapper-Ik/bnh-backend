@@ -89,6 +89,11 @@ class UpdateRequest(Command):
     vendor_selection: VendorSelection | None = None
 
 
+class StartRevision(Command):
+    expected_version: int = Field(ge=1)
+    idempotency_key: UUID
+
+
 class Intent(Command):
     expected_version: int = Field(ge=1)
     action: Literal["submit", "approve", "reject", "return"]
@@ -139,6 +144,8 @@ class RequestView(BaseModel):
     required_authority: str | None
     routing_explanation: str | None
     submission_blocker: str | None = None
+    decision_blocker: str | None = None
+    viewing_revision: int | None = None
     content: Content
     available_actions: list[str]
     revision_number: int

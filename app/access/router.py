@@ -56,6 +56,7 @@ async def capabilities(session: AsyncSession, req: Requisition, actor: Actor) ->
     for action in (
         "read",
         "edit",
+        "revise",
         "submit",
         "approve",
         "reject",
