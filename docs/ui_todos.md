@@ -144,3 +144,8 @@ The saved-draft persistence report remains under investigation. A new real-backe
 ## REQ-001 — missing HOD and account-switch diagnosis (2026-10-08)
 
 The owner clarified the refresh sequence: save without an HOD, provision an HOD, then refresh. Read-only audit evidence shows the HOD signing in with a different identity from the draft creator after the save. This is consistent with the original browser session being replaced: cookies are shared across tabs on the same origin, and unsubmitted drafts are not visible to another staff account merely because it holds an HOD office. Creating/appointing an HOD itself does not change the authenticated account or draft ownership. Sign back in as the original requester to reopen and submit the saved draft; use separate browser contexts for distinct test users. Confirm this path in the deployed UI before calling the live report resolved. No access rules or persistence behavior were changed.
+
+
+## REQ-001 — same-account clarification; issue remains open (2026-10-08)
+
+The owner confirms the refresh used the original creator account. The account-switch explanation above is an unconfirmed hypothesis, not an established cause: another user's audit login cannot identify the session used by the reported browser tab. Read-only diagnostics still find the saved draft, update and cost lines for an active requester. The next necessary diagnostic is the exact page URL and visible state (empty list, empty creation form or detail error). No production behavior or access rule has been changed, and no live resolution is claimed.

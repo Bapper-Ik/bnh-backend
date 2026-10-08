@@ -157,3 +157,10 @@ Publication verified on origin/dev: backend `3c933074ba9e2e226a67a5197ba50d7adde
 - No product behavior changed. The requester should sign back in with the original account to reopen the saved draft. Confirmation on the deployed UI remains outstanding; no persistence defect or repair is claimed.
 
 - Verification: the isolated checkout passed Ruff lint/format, mypy and all 209 backend tests on a newly migrated local PostgreSQL database. Frontend changes are reference documentation only; no browser/product code changed. The preceding six frontend unit and sixteen browser checks remain the latest UI verification, not a new run of the HOD sequence in a browser.
+
+
+## REQ-001 — correction after same-account clarification (2026-10-08)
+
+- The owner confirms they used the same account after HOD provisioning. The earlier inference that the HOD login caused the disappearance is not established by the audit history. A login event for another identity does not prove a session switch in the user's browser. The investigation remains open.
+- Read-only diagnostics verified that the affected draft, saved update and cost lines remain present for an active requester. No business records or deployment settings were changed. The exact failing UI page and response are still needed; requested the page address and whether the user sees an empty list, a blank new-request form or a detail error.
+- This correction changes documentation only. Existing verification remains 209 backend tests, six frontend unit tests and sixteen browser journeys; these are prior results, not newly executed tests or proof of a live fix. No approval-feature work has started.
