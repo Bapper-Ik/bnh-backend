@@ -1,8 +1,9 @@
+import hashlib
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import record_event
@@ -18,6 +19,7 @@ router = APIRouter(prefix="/api/v1/organisation", tags=["Organisation"])
 
 
 class DirectoryUpdate(Command):
+    expected_version: str | None = Field(default=None, min_length=64, max_length=64)
     name: str | None = Field(default=None, min_length=2, max_length=180)
     active: bool | None = None
 
@@ -41,6 +43,17 @@ class MembershipState(Command):
     active: bool
 
 
+def directory_version(record: Entity | Department) -> str:
+    values = [str(record.id), record.name, record.code, str(record.active)]
+    values.append(record.kind if isinstance(record, Entity) else str(record.entity_id))
+    return hashlib.sha256("\0".join(values).encode()).hexdigest()
+
+
+def check_version(record: Entity | Department, expected: str | None) -> None:
+    if expected is not None and expected != directory_version(record):
+        raise DomainError("REVISION_CONFLICT", "This record changed. Reload it before saving.", 409)
+
+
 def apply_update(record: Entity | Department | Identity, body: DirectoryUpdate) -> None:
     if body.name is not None:
         if len(body.name.strip()) < 2:
@@ -61,9 +74,15 @@ async def update_entity(
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> DirectoryView:
     require_permission(actor, "organisation:manage")
+    await s.execute(text("SELECT pg_advisory_xact_lock(67200602)"))
     entity = await s.scalar(select(Entity).where(Entity.id == entity_id).with_for_update())
     if not entity:
         raise DomainError("RESOURCE_NOT_AVAILABLE", "Company not found.", 404)
+    check_version(entity, body.expected_version)
+    if body.name is not None and await s.scalar(
+        select(Entity.id).where(Entity.id != entity_id, Entity.name == body.name.strip())
+    ):
+        raise DomainError("VALIDATION_FAILED", "Company name already exists.", 422)
     apply_update(entity, body)
     await record_event(
         s,
@@ -83,11 +102,31 @@ async def update_department(
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> DirectoryView:
     require_permission(actor, "organisation:manage")
+    scope = await s.scalar(select(Department.entity_id).where(Department.id == department_id))
+    if not scope:
+        raise DomainError("RESOURCE_NOT_AVAILABLE", "Department not found.", 404)
+    await s.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:scope, 0))"), {"scope": str(scope)}
+    )
+    entity = await s.scalar(select(Entity).where(Entity.id == scope).with_for_update(read=True))
     department = await s.scalar(
         select(Department).where(Department.id == department_id).with_for_update()
     )
     if not department:
         raise DomainError("RESOURCE_NOT_AVAILABLE", "Department not found.", 404)
+    check_version(department, body.expected_version)
+    if body.active is True and (not entity or not entity.active):
+        raise DomainError("VALIDATION_FAILED", "Enable the company before this department.", 422)
+    if body.name is not None and await s.scalar(
+        select(Department.id).where(
+            Department.id != department_id,
+            Department.entity_id == scope,
+            Department.name == body.name.strip(),
+        )
+    ):
+        raise DomainError(
+            "VALIDATION_FAILED", "Department name already exists in this company.", 422
+        )
     apply_update(department, body)
     await record_event(
         s,

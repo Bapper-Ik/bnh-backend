@@ -1915,11 +1915,11 @@ Build the shared navigation, sign-in/session experience, and minimum permitted o
 
 ### Implementation Status
 
-**Status:** In Progress
+**Status:** Implemented
 
-**Implementation Evidence:** Shared grayscale shell and connected account screens 1–3 are implemented: sign-in, generic forgot-password requests, shared activation/reset, expired/replayed links, password matching, session revocation, safe outage retry and desktop/mobile layout. Five real-backend browser journeys include account access and vendor regression. Isolated frontend lint, formatting, typecheck (zero errors/warnings), three unit tests, build and all five browser journeys passed. Desktop reset and narrow activation layouts were visually inspected. Staff & Access Management (11) now includes protected directory/search, invitation and detail drawers, account status/session controls, department membership and controlled appointment assignment/revocation. Optimistic versions preserve stale edits; self-status/authority changes are blocked and Secretary/Chairman separation is retained. Screen 11 verification: all 182 working backend tests and 113 exact staged release tests passed, including eight new staff cases; staged Ruff, formatting and mypy passed. Exact frontend ESLint, Prettier, typecheck (zero errors/warnings), three unit tests, production build and nine real-backend browser journeys passed. Desktop and mobile list/drawer layouts were inspected. Organisation & Authority (12) remains unfinished; WEB-001 stays In Progress.
+**Implementation Evidence:** Shared grayscale shell and connected account screens 1–3 are implemented: sign-in, generic forgot-password requests, shared activation/reset, expired/replayed links, password matching, session revocation, safe outage retry and desktop/mobile layout. Five real-backend browser journeys include account access and vendor regression. Isolated frontend lint, formatting, typecheck (zero errors/warnings), three unit tests, build and all five browser journeys passed. Desktop reset and narrow activation layouts were visually inspected. Staff & Access Management (11) now includes protected directory/search, invitation and detail drawers, account status/session controls, department membership and controlled appointment assignment/revocation. Optimistic versions preserve stale edits; self-status/authority changes are blocked and Secretary/Chairman separation is retained. Screen 11 verification: all 182 working backend tests and 113 exact staged release tests passed, including eight new staff cases; staged Ruff, formatting and mypy passed. Exact frontend ESLint, Prettier, typecheck (zero errors/warnings), three unit tests, production build and nine real-backend browser journeys passed. Desktop and mobile list/drawer layouts were inspected. Organisation & Authority (12) is implemented with company/department drawers, versioned updates and enable/disable confirmations, named officeholder status/history and missing/conflicting assignment visibility, and a read-only approval matrix. Screen 12 verification: the exact release passed Ruff, formatting, mypy, all 120 backend tests, frontend ESLint/Prettier/typecheck, three unit tests, production build and all twelve PostgreSQL-backed browser journeys. Full working-source regression in a fresh isolated database passed 189 tests. Desktop and narrow layouts were visually inspected. Screens 1–3, 11 and 12 complete the scoped account-access and restricted-administration journey.
 
-**Deployment limitation:** Email delivery requires private Render configuration and a verified Resend sender; no live inbox delivery is claimed. Remaining administration screens retain their own delivery gate.
+**Deployment / acceptance:** The owner reports email working after enabling it in Render. Screen 12 uses the existing Dockerfiles and startup migrations with no new environment variables or migration. Its deployed operation must be checked after the feature push; genuine staff acceptance remains separate from synthetic browser verification.
 
 ### Requirement Basis
 
@@ -1927,7 +1927,7 @@ Build the shared navigation, sign-in/session experience, and minimum permitted o
 
 ### Dependencies
 
-NOT-001, DOC-001
+IAM-001, IAM-002, ORG-001 for the delivered account-access and restricted-administration screens. Notification and document viewers remain within their own later journeys under the fourteen-screen scope.
 
 ### Actors
 
@@ -1974,11 +1974,11 @@ Staff can access a consistent greyscale application with truthful capabilities a
 
 ### Acceptance Criteria
 
-- [ ] Login/logout/session expiry work against the actual backend.
-- [ ] Wrong-role deep links show a safe denial and do not expose cached sensitive data.
-- [ ] No fake production users, simulated permission switching, or static approval totals remain.
-- [ ] Colour and typography tokens follow the standard; every status has a textual/icon meaning.
-- [ ] Administration forms cannot self-grant financial authority.
+- [x] Login/logout/session expiry work against the actual backend.
+- [x] Wrong-role deep links show a safe denial and do not expose cached sensitive data.
+- [x] No fake production users, simulated permission switching, or static approval totals remain.
+- [x] Colour and typography tokens follow the standard; every status has a textual/icon meaning.
+- [x] Administration forms cannot self-grant financial authority.
 
 ---
 

@@ -203,13 +203,15 @@ async def create_department(
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> Item:
     require_permission(actor, "organisation:manage")
-    entity = await s.get(Entity, body.entity_id)
-    if not entity or not entity.active:
-        raise DomainError("VALIDATION_FAILED", "Select an existing company.", 422)
     await s.execute(
         text("SELECT pg_advisory_xact_lock(hashtextextended(:scope, 0))"),
         {"scope": str(body.entity_id)},
     )
+    entity = await s.scalar(
+        select(Entity).where(Entity.id == body.entity_id).with_for_update(read=True)
+    )
+    if not entity or not entity.active:
+        raise DomainError("VALIDATION_FAILED", "Select an active company.", 422)
     if await s.scalar(
         select(Department.id).where(
             Department.entity_id == body.entity_id,

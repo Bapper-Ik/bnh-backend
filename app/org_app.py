@@ -9,6 +9,7 @@ from app.core.errors import DomainError
 from app.organisation.lifecycle import router as lifecycle_router
 from app.organisation.router import router
 from app.organisation.staff import router as staff_router
+from app.organisation.workspace import router as workspace_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -37,4 +38,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(router)
     app.include_router(lifecycle_router)
     app.include_router(staff_router)
+    app.include_router(workspace_router)
     return app

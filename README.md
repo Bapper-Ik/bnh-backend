@@ -80,4 +80,11 @@ Migration 0010 adds activation state and durable email jobs. Email defaults off;
 
 `/api/v1/staff` supplies a protected searchable/paginated directory, account status, memberships and appointment history. The Svelte `/staff` screen uses server-authorised actions and versioned mutation endpoints. An administrator cannot change their own status, membership or appointments through this screen. Department changes require organisation:manage; appointments require office_assignment:manage. Account administration does not grant financial authority, and invitations grant no membership or permissions.
 
-Use the same vendor_app assembly and existing migration 0010; this feature requires no new schema migration. Configure real companies/departments through the existing organisation APIs before assigning membership. Organisation screen 12 is still pending. Email-disabled deployments explicitly show that invitations are unavailable; existing staff management remains usable. Endpoint details are in [integration notes](docs/ui_todos.md).
+Use the same vendor_app assembly and existing migration 0010; this feature requires no new schema migration. Configure real companies/departments on Organisation & Authority (screen 12) before assigning membership. Email-disabled deployments explicitly show that invitations are unavailable; existing staff management remains usable. Endpoint details are in [integration notes](docs/ui_todos.md).
+
+
+## Organisation & Authority (screen 12)
+
+`GET /api/v1/organisation/workspace?entity_id=...` supplies the protected company catalogue, selected company's departments and named appointments, current eligibility reasons, missing/conflicting appointments and read-only approval matrix. Requires organisation:manage. The Svelte `/organisation` screen provides Companies, Departments, Officeholders and Approval matrix tabs; create/edit/status actions use drawers. Office assignment stays in Staff & Access with its separate capability.
+
+New workspace PATCH endpoints require expected_version, detect stale changes and reject protected fields. Existing create APIs are reused. Renames detect duplicate names before database writes; company/department scope locks serialize competing updates. Disabled companies cannot receive new departments or re-enabled departments. Disabling retains memberships, appointments and history; re-enabling can restore eligibility, subject to current account, membership and dates. No new migration or environment variable is required. Integration details are in docs/ui_todos.md.
