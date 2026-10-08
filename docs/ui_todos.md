@@ -139,3 +139,8 @@ Cloudinary is owner-selected. Configure backend-only `CLOUDINARY_URL` or the thr
 ## REQ-001 — reported draft refresh issue (open, 2026-10-08)
 
 The saved-draft persistence report remains under investigation. A new real-backend browser regression saves a named draft, refreshes the list with a Draft filter, reopens and edits it, refreshes the details, and signs in through a fresh browser context to retrieve the same record and values. That path and the thirteen requisition-creation integration tests pass on isolated PostgreSQL. A read-only check of the original development database found a DRAFT and its creation/update audit events. No business data was changed. Obtain the failing navigation/refresh path before attributing the report to persistence, filtering or form validation; none is established as the cause. No product fix or live resolution is claimed.
+
+
+## REQ-001 — missing HOD and account-switch diagnosis (2026-10-08)
+
+The owner clarified the refresh sequence: save without an HOD, provision an HOD, then refresh. Read-only audit evidence shows the HOD signing in with a different identity from the draft creator after the save. This is consistent with the original browser session being replaced: cookies are shared across tabs on the same origin, and unsubmitted drafts are not visible to another staff account merely because it holds an HOD office. Creating/appointing an HOD itself does not change the authenticated account or draft ownership. Sign back in as the original requester to reopen and submit the saved draft; use separate browser contexts for distinct test users. Confirm this path in the deployed UI before calling the live report resolved. No access rules or persistence behavior were changed.

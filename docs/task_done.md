@@ -148,3 +148,12 @@ Publication verified on origin/dev: backend `3c933074ba9e2e226a67a5197ba50d7adde
 - No application change or persistence repair is claimed. The report remains open pending the exact page/navigation path and whether the saved record disappears from the list or fields become blank. Do not advance to the approval feature on the basis of this diagnostic coverage.
 
 - Final isolated-checkout verification: Ruff lint/format, mypy and all 208 backend tests passed; frontend ESLint, Prettier, svelte-check (zero errors/warnings), six unit tests, production build and all sixteen real-backend browser journeys passed. This is regression coverage and diagnosis, not a reproduced-and-fixed defect.
+
+
+## REQ-001 — missing HOD and draft ownership diagnosis (2026-10-08)
+
+- The owner clarified that the draft preceded HOD provisioning. Read-only audit diagnostics found a subsequent HOD login under a different identity from the draft creator. This supports an account-switch explanation for a hidden private draft; it does not prove which browser tab the owner used. No live records, credentials or appointments were modified.
+- Added a PostgreSQL-backed regression for saving without an HOD, refusing signing while preserving the draft, creating and appointing a new HOD through the real APIs, preserving the creator's session/reference/content/version, denying the new HOD access to the unsubmitted draft, signing back in as its creator, submitting, and finally allowing the assigned HOD to read the submitted request.
+- No product behavior changed. The requester should sign back in with the original account to reopen the saved draft. Confirmation on the deployed UI remains outstanding; no persistence defect or repair is claimed.
+
+- Verification: the isolated checkout passed Ruff lint/format, mypy and all 209 backend tests on a newly migrated local PostgreSQL database. Frontend changes are reference documentation only; no browser/product code changed. The preceding six frontend unit and sixteen browser checks remain the latest UI verification, not a new run of the HOD sequence in a browser.

@@ -1096,7 +1096,7 @@ Allow a requester to create, resume, and update a draft containing the supplied 
 
 **Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
 
-**Reported issue (open, 2026-10-08):** The owner reports saved drafts disappearing after refresh. Read-only diagnostics on the originally supplied development database found migration 0011, a persisted DRAFT and its creation/update audit events. Isolated browser verification of list/detail refresh, reopening, editing and a fresh login passed, alongside the thirteen requisition-creation integration tests. The reported path has not been reproduced; no application persistence fix or deployed resolution is claimed. Confirm whether disappearance means an absent list row, cleared saved fields, or remaining on the new-request form after saving before changing behavior.
+**Draft-refresh investigation (2026-10-08):** The owner clarified that the draft was saved without an HOD, followed by provisioning an HOD and refreshing. Read-only audit diagnostics show a later HOD sign-in under a different identity from the draft creator, consistent with an account switch hiding the creator's private draft. The stored draft and update remain present. Missing authority must block submission only; appointment creation does not transfer draft ownership. Added integration coverage for the exact sequence, including no-HOD save, blocked submission, provisioning/appointment, unchanged requester content, HOD draft denial, requester recovery and HOD access only after submission. No application persistence repair is claimed; confirm the original creator's sign-in on the deployed UI.
 
 ### Requirement Basis
 

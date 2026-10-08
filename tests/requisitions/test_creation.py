@@ -17,6 +17,7 @@ from app.main import create_app
 from app.organisation.models import Office
 from app.requisitions.models import Revision, SigningChallenge
 from tests.requisitions.test_workflow import (  # noqa: F401
+    PASSWORD,
     content,
     draft,
     sign_in,
@@ -106,6 +107,74 @@ async def test_incomplete_draft_idempotency_search_and_conflict(context, organis
         "total"
     ] == 0
     assert (await client.get("/api/v1/requisitions/" + req["id"])).status_code == 404
+
+
+async def test_missing_hod_draft_persists_and_is_private_after_hod_signs_in(
+    context, organisation, sessions
+):
+    client, _, _ = context
+    people = organisation["people"]
+    async with sessions() as session, session.begin():
+        office = await session.scalar(
+            select(Office).where(Office.identity_id == people["hod"]["id"])
+        )
+        office.active = False
+        department_id = str(office.department_id)
+        requester = await session.scalar(
+            select(Account).where(Account.identity_id == people["staff"]["id"])
+        )
+        requester.permissions = ["staff:manage", "organisation:manage", "office_assignment:manage"]
+    await sign_in(client, people["staff"])
+    req = await draft(client, organisation, "71640")
+    path = "/api/v1/requisitions/" + req["id"]
+    assert "hod" in req["submission_blocker"]
+    assert req["state"] == "DRAFT"
+    blocked = await client.post(
+        path + "/signing-challenges",
+        json={"action": "submit", "expected_version": req["version"]},
+    )
+    assert blocked.status_code == 409
+    assert blocked.json()["code"] == "AUTHORITY_ASSIGNMENT_BLOCKED"
+    assert (await client.get(path)).json()["content"] == req["content"]
+
+    hod = {"name": "Synthetic newly appointed HOD", "email": f"hod-{uuid4()}@example.com"}
+    created = await client.post("/api/v1/auth/accounts", json={**hod, "initial_password": PASSWORD})
+    assert created.status_code == 201
+    assignment = {
+        "identity_id": created.json()["id"],
+        "entity_id": organisation["entity_id"],
+        "department_id": department_id,
+    }
+    assert (
+        await client.post("/api/v1/organisation/memberships", json=assignment)
+    ).status_code == 201
+    assert (
+        await client.post(
+            "/api/v1/organisation/offices",
+            json={**assignment, "role": "hod", "authorisation_reference": "Synthetic appointment"},
+        )
+    ).status_code == 201
+    assert (await client.get("/api/v1/auth/me")).json()["id"] == str(people["staff"]["id"])
+    refreshed = (await client.get(path)).json()
+    assert refreshed["content"] == req["content"]
+    assert refreshed["reference"] == req["reference"]
+    assert refreshed["version"] == req["version"]
+    assert refreshed["submission_blocker"] is None
+
+    # Logging in as the newly provisioned HOD changes the cookie, not draft ownership.
+    await sign_in(client, hod)
+    assert (await client.get(path)).status_code == 404
+    hidden = await client.get("/api/v1/requisitions", params={"search": req["reference"]})
+    assert hidden.json()["total"] == 0
+    await sign_in(client, people["staff"])
+    restored = (await client.get(path)).json()
+    assert restored == refreshed
+    listed = await client.get("/api/v1/requisitions", params={"search": req["reference"]})
+    assert listed.json()["items"][0]["id"] == req["id"]
+    submitted, _ = await signed(client, restored, people["staff"], "submit")
+    assert submitted["state"] == "PENDING_AUTHORITY"
+    await sign_in(client, hod)
+    assert (await client.get(path)).json()["state"] == "PENDING_AUTHORITY"
 
 
 async def test_documents_signed_manifest_private_access_and_outbox(context, organisation, sessions):
