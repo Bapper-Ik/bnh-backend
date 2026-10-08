@@ -1378,11 +1378,11 @@ Let the Company Secretary record the actual Board meeting outcome for an eligibl
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Screen 9 `/requisitions/{id}/board` and screen 8 stage-specific My Tasks are delivered as one connected Board journey. Migration 0013 adds protected resolution records and immutable Chairman decisions. Private Cloudinary evidence, exact revision/amount binding, independent fresh signatures, correction predecessors and later resolutions preserve all four outcomes. Full isolated PostgreSQL suite: 244 passed; frontend: 6 unit and 26 real-backend browser tests passed, including three Board journeys. Ruff, format, mypy, ESLint, Prettier, Svelte type checks (zero warnings) and production build passed. Desktop/390px screenshots reviewed. See `task_done.md` for release details.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** No implementation blocker. Render rollout, real Cloudinary evidence verification and genuine staff acceptance remain external checks; no staff acceptance is claimed.
 
 ### Requirement Basis
 
@@ -1422,7 +1422,7 @@ Board case UUID; request/revision; entity/Board identity; meeting date; resoluti
 
 ### API and Interface Contract
 
-GET /board-cases?queue=secretary; POST /requisitions/{uuid}/board-resolutions; PATCH /board-resolutions/{uuid}/draft; POST /board-resolutions/{uuid}/submit. Permissions: board_resolution:record and board_resolution:submit plus office/scope checks.
+Implemented API uses the shared GET /approvals/inbox for stage-scoped Board tasks; GET /requisitions/{uuid}/board for the workspace; POST /requisitions/{uuid}/board-resolutions with expected_version, idempotency_key and data to save a current draft or start an eligible successor; POST /board-resolutions/{uuid}/attachments for private formal evidence; and POST /board-resolutions/{uuid}/signing-challenges then /actions with board_submit. Server-derived Secretary authority and frozen assignment scope control recording/submission.
 
 ### Delivery Surface
 
@@ -1441,11 +1441,11 @@ A signed, evidenced Board outcome is ready for an independent Chairman sign-off 
 
 ### Acceptance Criteria
 
-- [ ] Wrong role/scope cannot record or view another Board's confidential evidence.
-- [ ] A low-value MD request and an above-₦500-million request reach the same selected Board process.
-- [ ] Submitting evidence alone cannot approve the request.
-- [ ] Missing evidence, inconsistent amounts, future meeting date, and identical recorder/Chairman identity fail.
-- [ ] Meeting date and server recording date are preserved separately.
+- [x] Wrong role/scope cannot record or view another Board's confidential evidence.
+- [x] A low-value MD request and an above-₦500-million request reach the same selected Board process.
+- [x] Submitting evidence alone cannot approve the request.
+- [x] Missing evidence, inconsistent amounts, future meeting date, and identical recorder/Chairman identity fail.
+- [x] Meeting date and server recording date are preserved separately.
 
 ---
 
@@ -1462,11 +1462,11 @@ Let the Board Chairman review the Secretary's signed record and either confirm i
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Screen 9 `/requisitions/{id}/board` and screen 8 stage-specific My Tasks are delivered as one connected Board journey. Migration 0013 adds protected resolution records and immutable Chairman decisions. Private Cloudinary evidence, exact revision/amount binding, independent fresh signatures, correction predecessors and later resolutions preserve all four outcomes. Full isolated PostgreSQL suite: 244 passed; frontend: 6 unit and 26 real-backend browser tests passed, including three Board journeys. Ruff, format, mypy, ESLint, Prettier, Svelte type checks (zero warnings) and production build passed. Desktop/390px screenshots reviewed. See `task_done.md` for release details.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** No implementation blocker. Render rollout, real Cloudinary evidence verification and genuine staff acceptance remain external checks; no staff acceptance is claimed.
 
 ### Requirement Basis
 
@@ -1505,7 +1505,7 @@ Board resolution UUID/version; request revision; Chairman identity/current appoi
 
 ### API and Interface Contract
 
-GET /board-cases?queue=chairman; POST /board-resolutions/{uuid}/chairman-actions with confirm|return, expected_version, challenge reference, idempotency key, and reason where required. The UI label should clarify “Confirm Board decision” even though the Chairman is the final in-system approver.
+Implemented API reuses GET /approvals/inbox for the current Chairman stage and GET /requisitions/{uuid}/board for the exact records. POST /board-resolutions/{uuid}/signing-challenges and /actions accept board_confirm|board_return, expected_version, challenge, idempotency key and a return reason. The shared signing dialog labels confirmation “Confirm Board decision”; both record and current appointment identities are bound to the challenge.
 
 ### Delivery Surface
 
@@ -1523,11 +1523,11 @@ The exact Board outcome is finalised by the Chairman with two distinct attributa
 
 ### Acceptance Criteria
 
-- [ ] Secretary cannot confirm their own record; Chairman cannot confirm their own requisition.
-- [ ] No submitted Secretary record means no Chairman finalisation.
-- [ ] Each of the four resolution outcomes produces the correct request state.
-- [ ] Chairman cannot silently edit evidence or turn a rejected resolution into approval.
-- [ ] Concurrent confirmations/returns and request replay cannot produce conflicting outcomes.
+- [x] Secretary cannot confirm their own record; Chairman cannot confirm their own requisition.
+- [x] No submitted Secretary record means no Chairman finalisation.
+- [x] Each of the four resolution outcomes produces the correct request state.
+- [x] Chairman cannot silently edit evidence or turn a rejected resolution into approval.
+- [x] Concurrent confirmations/returns and request replay cannot produce conflicting outcomes.
 
 ---
 
@@ -1544,11 +1544,11 @@ Preserve a complete history when the Chairman returns a record, the Board defers
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** Implemented
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Screen 9 `/requisitions/{id}/board` and screen 8 stage-specific My Tasks are delivered as one connected Board journey. Migration 0013 adds protected resolution records and immutable Chairman decisions. Private Cloudinary evidence, exact revision/amount binding, independent fresh signatures, correction predecessors and later resolutions preserve all four outcomes. Full isolated PostgreSQL suite: 244 passed; frontend: 6 unit and 26 real-backend browser tests passed, including three Board journeys. Ruff, format, mypy, ESLint, Prettier, Svelte type checks (zero warnings) and production build passed. Desktop/390px screenshots reviewed. See `task_done.md` for release details.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** No implementation blocker. Render rollout, real Cloudinary evidence verification and genuine staff acceptance remain external checks; no staff acceptance is claimed.
 
 ### Requirement Basis
 
@@ -1586,7 +1586,7 @@ Predecessor/successor resolution versions; return reason; correction summary; ne
 
 ### API and Interface Contract
 
-POST /board-resolutions/{uuid}/revisions for returned records; POST /requisitions/{uuid}/board-resolutions for a permitted later resolution. Reuse BRD-001/002 submission/signing; do not add public arbitrary state-change endpoints.
+Implemented API consolidates permitted successor creation into POST /requisitions/{uuid}/board-resolutions. The locked current state determines correction versus later_resolution; the server assigns predecessor and number, never browser-selected IDs. Expected version and idempotency bind the command. Both paths reuse BRD-001/002 fresh signing; there is no public arbitrary status-change endpoint.
 
 ### Delivery Surface
 
@@ -1605,11 +1605,11 @@ Corrections and later decisions remain independently evidenced without overwriti
 
 ### Acceptance Criteria
 
-- [ ] Chairman return produces a traceable successor record requiring fresh sign-off.
-- [ ] An old Chairman challenge cannot confirm a corrected resolution.
-- [ ] Deferred/conditional records never appear as unconditional approval in lists or exports.
-- [ ] A later resolution cannot clear a hold without both selected roles completing their actions.
-- [ ] A materially changed requisition is rejected from the old resolution-confirmation path.
+- [x] Chairman return produces a traceable successor record requiring fresh sign-off.
+- [x] An old Chairman challenge cannot confirm a corrected resolution.
+- [x] Deferred/conditional records never appear as unconditional approval in lists or exports.
+- [x] A later resolution cannot clear a hold without both selected roles completing their actions.
+- [x] A materially changed requisition is rejected from the old resolution-confirmation path.
 
 ---
 

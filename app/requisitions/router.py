@@ -87,7 +87,13 @@ async def list_requests(
     if inbox:
         query = query.where(
             Requisition.state.in_(
-                ["PENDING_AUTHORITY", "AWAITING_BOARD_RESOLUTION", "AWAITING_CHAIRMAN_SIGNOFF"]
+                [
+                    "PENDING_AUTHORITY",
+                    "AWAITING_BOARD_RESOLUTION",
+                    "AWAITING_CHAIRMAN_SIGNOFF",
+                    "DEFERRED",
+                    "CONDITIONALLY_APPROVED",
+                ]
             )
         )
     if search:
@@ -566,7 +572,7 @@ async def approval_inbox(
     return await list_requests(
         inbox=True,
         search=search,
-        state="PENDING_AUTHORITY",
+        state="",
         limit=limit,
         offset=offset,
         actor=actor,

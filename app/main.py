@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import FastAPI, Request
 
 from app.audit.service import AuditDetails, record_event
+from app.board.router import router as board_router
 from app.core.config import Settings, get_settings
 from app.core.errors import DomainError
 from app.evidence.router import router as evidence_router
@@ -18,6 +19,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(requisitions_router)
     app.include_router(approvals_router)
     app.include_router(evidence_router)
+    app.include_router(board_router)
     cfg = settings or get_settings()
     app.state.evidence_storage = CloudinaryStorage(cfg)
     app.state.uploads_enabled = bool(
@@ -29,7 +31,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await previous(request, exc)
         path = request.url.path
         action = (
-            "signature.rejected"
+            "board.rejected"
+            if "/board" in path
+            else "signature.rejected"
             if path.endswith(("/actions", "/signing-challenges"))
             else "evidence.rejected"
             if "/attachments" in path

@@ -220,6 +220,15 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
                 actions = ["approve", "reject", "return"]
         except DomainError as exc:
             decision_blocker = exc.message
+    if revision and revision.authority == "board":
+        from app.board.service import board_access
+
+        try:
+            await board_access(s, req, actor)
+            actions.append("board_workspace")
+        except DomainError as exc:
+            if exc.code != "RESOURCE_NOT_AVAILABLE":
+                decision_blocker = exc.message
     history = []
     revisions = (
         await s.scalars(
@@ -248,6 +257,30 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
                     or (signer.display_name if signer else "Staff"),
                     "at": decision.created_at.isoformat(),
                     "reason": decision.reason,
+                }
+            )
+    from app.board.models import ChairmanDecision, Resolution
+
+    board_events = (
+        await s.execute(
+            select(Resolution, ChairmanDecision)
+            .join(Revision, Revision.id == Resolution.revision_id)
+            .join(ChairmanDecision, ChairmanDecision.resolution_id == Resolution.id)
+            .where(Revision.requisition_id == req.id)
+            .order_by(ChairmanDecision.created_at)
+        )
+    ).all()
+    for _resolution, board_decision in board_events:
+        if board_decision.action == "board_confirm":
+            history.append(
+                {
+                    "type": "board_" + board_decision.outcome.lower(),
+                    "revision": req.revision_number,
+                    "actor": board_decision.signature.get("name"),
+                    "at": board_decision.created_at.isoformat(),
+                    "reason": "Board outcome recorded. Unresolved conditions remain on hold."
+                    if board_decision.outcome == "CONDITIONAL_APPROVE"
+                    else "Board outcome confirmed.",
                 }
             )
     projected, redacted = project_content(req.content, actor)
@@ -367,6 +400,8 @@ async def revision_view(
         decision.action if decision else "",
         "AWAITING_BOARD_RESOLUTION" if revision.authority == "board" else "PENDING_AUTHORITY",
     )
+    if revision.authority == "board" and revision.id == req.current_revision_id:
+        state = req.state
     context = revision.context.get("context", {})
     if (
         isinstance(context, dict)

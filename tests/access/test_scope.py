@@ -114,6 +114,14 @@ async def scope_data(sessions):
                 policy_version="bnh-doa-v1",
                 routing_explanation="Synthetic policy",
                 content_digest="a" * 64,
+                context={
+                    "route": {
+                        "secretary_id": str(people["secretary"][0].id),
+                        "chairman_id": str(people["chairman"][0].id),
+                    }
+                }
+                if authority == "board"
+                else {},
                 signature={},
             )
             s.add(revision)

@@ -4,7 +4,7 @@ FastAPI + PostgreSQL backend for BNH requisitions. Approval records represent au
 
 Development branch: `dev`. Each feature is verified, committed, and pushed before the next begins.
 
-The delivered assembly is `app.main:create_app`: runtime, accounts, organisation, scoped access, Vendors, staff administration and requisition creation/submission with private documents. Apply migrations through 0012. Individual approvals, the assigned inbox, returned-request correction and immutable revision/document viewing are delivered. Board workspaces remain a subsequent journey. See [Render setup](docs/render.md) for startup migrations and email configuration.
+The delivered assembly is `app.main:create_app`: runtime, accounts, organisation, scoped access, Vendors, staff administration and requisition creation/submission with private documents. Apply migrations through 0013. Individual approvals, the assigned inbox, returned-request correction and immutable revision/document viewing are delivered. The Board workspace records formal meeting outcomes with independent Secretary and Chairman signatures, correction history and conditional/deferred holds. See [Render setup](docs/render.md) for startup migrations and email configuration.
 
 ## Development setup
 
@@ -80,7 +80,7 @@ Migration 0010 adds activation state and durable email jobs. Email defaults off;
 
 `/api/v1/staff` supplies a protected searchable/paginated directory, account status, memberships and appointment history. The Svelte `/staff` screen uses server-authorised actions and versioned mutation endpoints. An administrator cannot change their own status, membership or appointments through this screen. Department changes require organisation:manage; appointments require office_assignment:manage. Account administration does not grant financial authority, and invitations grant no membership or permissions.
 
-The current release uses app.main and migrations through 0012; staff administration itself introduced no migration beyond 0010. Configure real companies/departments on Organisation & Authority (screen 12) before assigning membership. Email-disabled deployments explicitly show that invitations are unavailable; existing staff management remains usable. Endpoint details are in [integration notes](docs/ui_todos.md).
+The current release uses app.main and migrations through 0013; staff administration itself introduced no migration beyond 0010. Configure real companies/departments on Organisation & Authority (screen 12) before assigning membership. Email-disabled deployments explicitly show that invitations are unavailable; existing staff management remains usable. Endpoint details are in [integration notes](docs/ui_todos.md).
 
 
 ## Organisation & Authority (screen 12)
@@ -88,3 +88,13 @@ The current release uses app.main and migrations through 0012; staff administrat
 `GET /api/v1/organisation/workspace?entity_id=...` supplies the protected company catalogue, selected company's departments and named appointments, current eligibility reasons, missing/conflicting appointments and read-only approval matrix. Requires organisation:manage. The Svelte `/organisation` screen provides Companies, Departments, Officeholders and Approval matrix tabs; create/edit/status actions use drawers. Office assignment stays in Staff & Access with its separate capability.
 
 New workspace PATCH endpoints require expected_version, detect stale changes and reject protected fields. Existing create APIs are reused. Renames detect duplicate names before database writes; company/department scope locks serialize competing updates. Disabled companies cannot receive new departments or re-enabled departments. Disabling retains memberships, appointments and history; re-enabling can restore eligibility, subject to current account, membership and dates. No new migration or environment variable is required. Integration details are in docs/ui_todos.md.
+
+## Board resolution release (BRD-001–003)
+
+Deploy the backend before the matching frontend. The existing Docker startup script runs migration `0013` using the environment's `DATABASE_URL`. No new environment variables are needed; formal Board evidence uses the existing private Cloudinary configuration. Configure a distinct active Secretary and Chairman for the entity in Organisation & Authority before submitting a Board-routed request.
+
+My Tasks includes the Secretary's recording/correction tasks and the Chairman's submitted records. The workspace is `/requisitions/{id}/board`. Only the originally assigned, currently eligible Secretary and Chairman can access it or its formal evidence. Missing/replaced appointments block actions without substitution. Ordinary requesters see the permitted requisition status/history; technical administration does not confer Board access.
+
+The Secretary saves actual meeting details, uploads formal evidence and signs. The Chairman confirms that precise outcome or signs a return with a reason. APPROVE, REJECT, DEFER and CONDITIONAL_APPROVE retain distinct meanings. Conditional/deferred requests remain held during later recording and Chairman review; a later actual resolution needs both fresh signatures. Records returned to the Secretary create successor resolution versions without reopening the requisition.
+
+Schema `0013` protects submitted resolution rows and Chairman decisions against ordinary updates/deletes, and retains evidence digests and both signature records. The schema-owner trust boundary described above still applies. Audit and requisition notification intent commit atomically; email delivery of requisition notifications and protected external archiving remain separate work. Document malware scanning remains deferred by the owner.

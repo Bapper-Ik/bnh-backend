@@ -331,12 +331,14 @@ async def test_correction_snapshots_and_private_evidence_survive_resubmission(
         assert revisions[0].signature["challenge_id"] != revisions[1].signature["challenge_id"]
 
 
-async def test_board_and_readonly_have_no_individual_tasks(context, organisation, sessions):
+async def test_board_tasks_are_separate_from_individual_decisions(context, organisation, sessions):
     client, _, _ = context
     req = await pending(client, organisation, "500000000.01")
     for role in ["hod", "chief_of_staff", "md", "secretary", "chairman"]:
         await sign_in(client, organisation["people"][role])
-        assert (await client.get("/api/v1/approvals/inbox")).json()["total"] == 0
+        assert (await client.get("/api/v1/approvals/inbox")).json()["total"] == (
+            1 if role == "secretary" else 0
+        )
         assert (
             await client.post(
                 f"/api/v1/requisitions/{req['id']}/signing-challenges",
@@ -433,7 +435,7 @@ async def test_inbox_navigation_uses_office_not_queue_or_admin_permissions(
             json={"email": person["email"], "password": "Synthetic-test-password-2026"},
         )
         assert response.status_code == 200
-        expected = role in {"hod", "other_hod", "chief_of_staff", "md"}
+        expected = role in {"hod", "other_hod", "chief_of_staff", "md", "secretary", "chairman"}
         assert response.json()["can_access_approval_inbox"] is expected
         assert (await client.get("/api/v1/auth/me")).json()["can_access_approval_inbox"] is expected
         assert (await client.get("/api/v1/approvals/inbox")).json()["total"] == 0

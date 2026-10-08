@@ -61,7 +61,8 @@ async def has_approval_office(session: AsyncSession, identity_id: UUID) -> bool:
         await session.scalar(
             eligible_offices()
             .where(
-                Office.identity_id == identity_id, Office.role.in_(["hod", "chief_of_staff", "md"])
+                Office.identity_id == identity_id,
+                Office.role.in_(["hod", "chief_of_staff", "md", "secretary", "chairman"]),
             )
             .limit(1)
         )
