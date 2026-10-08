@@ -1831,11 +1831,11 @@ Produce a downloadable PDF or the repository-supported equivalent PDF-rendering 
 
 ### Implementation Status
 
-**Status:** Not Assessed
+**Status:** In Progress
 
-**Implementation Evidence:** Not yet recorded.
+**Implementation Evidence:** Implemented in the working tree: immutable revision/draft capture, persistent private PDF jobs, idempotent creation, leases/retries, current bank/Board authorisation, actual signatures/outcomes/timestamps, and screen 7 generation/list/view/download controls. Verification passed 293 PostgreSQL-backed backend tests, six frontend unit tests, 33 real-backend browser journeys, lint/format/type/build checks and backend Docker build/runtime checks. Synthetic-font PDF inspection covered drafts, Board signature records and long cost tables; these are not exact-font acceptance. The owner retained the exact Garamond, Arial and Baskerville Old Face fonts and will arrange licensed server copies. Private font configuration is required; no fallback or redistributed proprietary font files will be shipped.
 
-**Blocker:** None assessed. This does not mean external dependencies are available.
+**Blocker:** Licensed server copies of Garamond regular, Arial Bold and Baskerville Old Face regular are not supplied yet. Exact-font visual acceptance and a live private Cloudinary PDF round trip remain unverified. Synthetic test fonts validate mechanics only; the feature stays In Progress. The owner subsequently prioritised the remaining screens and release work while licensed fonts are pending.
 
 ### Requirement Basis
 
@@ -1891,11 +1891,11 @@ A private, accurate, properly formatted record can be generated from the stored 
 
 ### Acceptance Criteria
 
-- [ ] Export totals, reference, revision, declarations, and decision outcomes match stored values.
-- [ ] No legacy approval rows or blue visual styling remain.
-- [ ] Long descriptions, multiple pages, table headers, footers, and signature blocks render without clipping.
-- [ ] A requester cannot use export to obtain a restricted Board attachment or unapproved sensitive fields.
-- [ ] Re-export does not mutate signatures or rewrite the historical approval timestamp.
+- [x] Export totals, reference, revision, declarations, and decision outcomes match stored values.
+- [x] No legacy approval rows or blue visual styling remain.
+- [ ] Long descriptions, multiple pages, table headers, footers, and signature blocks render without clipping. Synthetic-font mechanics passed; repeat visual acceptance with the licensed exact fonts before closing this criterion.
+- [x] A requester cannot use export to obtain a restricted Board attachment or unapproved sensitive fields.
+- [x] Re-export does not mutate signatures or rewrite the historical approval timestamp.
 
 ---
 
@@ -2008,9 +2008,11 @@ Deliver the complete self-service browser journey for staff to prepare, sign, su
 
 **Status:** In Progress
 
-**Implementation Evidence:** The creation/submission portion of screens 5–7 is delivered: scoped list, reusable create/edit form, vendor lookup, exact totals, route preview, private attachment viewer, keyboard/pointer signing controls and submission history. Three new real-PostgreSQL browser journeys pass alongside twelve earlier journeys, including staff-to-HOD and low-value MD-to-Board paths, stale edits, cancellation, restricted links and session expiry. Desktop and 390px layouts were inspected. The APR-001 follow-up now delivers returned-request correction and historical revision viewing; dashboard and exports remain unfinished; this overall feature remains In Progress. Exact staged release passed Ruff/format/mypy, 208 backend tests on fresh local PostgreSQL, frontend lint/format/types, six unit tests, production build and all fifteen browser journeys (2026-10-08). Publication is recorded by the feature commits on origin/dev.
+**Implementation Evidence:** The creation/submission portion of screens 5–7 is delivered: scoped list, reusable create/edit form, vendor lookup, exact totals, route preview, private attachment viewer, keyboard/pointer signing controls and submission history. Three new real-PostgreSQL browser journeys pass alongside twelve earlier journeys, including staff-to-HOD and low-value MD-to-Board paths, stale edits, cancellation, restricted links and session expiry. Desktop and 390px layouts were inspected. The APR-001 follow-up now delivers returned-request correction and historical revision viewing; exports remain unfinished; this overall feature remains In Progress. Dashboard delivery is recorded below. Exact staged release passed Ruff/format/mypy, 208 backend tests on fresh local PostgreSQL, frontend lint/format/types, six unit tests, production build and all fifteen browser journeys (2026-10-08). Publication is recorded by the feature commits on origin/dev.
 
 **Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
+
+**Dashboard follow-up (screen 4):** Delivered current-scope status counts, own-request counts, actual pending tasks, safe recent activity and permitted shortcuts. Sign-in now lands on the shared dashboard. Ordinary staff have no approval panel; Board-only events require current eligibility. Refresh/focus rechecks scope; errors clear stale results. Verification: full backend suite **281 passed**, Ruff/format/mypy; frontend lint/format/types, **6 unit tests**, production build and **34 browser tests passed**, including desktop/390px visual inspection, persisted counts, role visibility, retry and expiry. The owner authorised Dashboard and My Account & Security while DOC-001 awaits licensed fonts; backup/recovery remains deferred. Dashboard publication uses its own WEB-002 commits on origin/dev, excluding unfinished PDF code.
 
 ### Requirement Basis
 

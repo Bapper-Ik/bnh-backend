@@ -10,6 +10,7 @@ from app.audit.service import AuditDetails, record_event
 from app.board.router import router as board_router
 from app.core.config import Settings, get_settings
 from app.core.errors import DomainError
+from app.dashboard.router import router as dashboard_router
 from app.evidence.router import router as evidence_router
 from app.evidence.storage import CloudinaryStorage
 from app.history.router import router as history_router
@@ -23,6 +24,7 @@ from app.vendor_app import create_app as create_runtime
 def create_app(settings: Settings | None = None) -> FastAPI:
     app = create_runtime(settings)
     app.state.individual_decisions_enabled = True
+    app.include_router(dashboard_router)
     app.include_router(requisitions_router)
     app.include_router(approvals_router)
     app.include_router(evidence_router)

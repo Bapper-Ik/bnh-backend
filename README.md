@@ -120,3 +120,9 @@ The workspace header opens a persistent notification drawer. Submission/resubmis
 Migration `0015` adds notifications and retry scheduling. The application materialises existing durable outbox jobs even when email is disabled. Email uses the existing Resend configuration and authenticated application links, without bank details, private evidence or signing payloads. Frozen delivery envelopes, leases, provider idempotency keys and bounded retries survive restarts. No additional service or environment variable is required. See [notification operations](docs/render.md#notification-delivery-not-001) for backlog, retry and deployment limitations.
 
 Authorised deployment operators can run `python -m scripts.notification_status` for aggregate queue states, attempts, safe failure codes and scheduling timestamps. It prints no addresses, message contents or staff/request identifiers and does not mutate jobs.
+
+### WEB-002 dashboard
+
+`GET /api/v1/dashboard` returns current-scope status and own-request counts, up to five latest requisitions, up to five currently assigned tasks, and ten recent permitted business events. Counts and activity use the same request visibility policy as the lists; administration alone grants no financial visibility. Private Board activity requires the original currently eligible Secretary/Chairman. Read-only reviewers receive only their authorised scope, without creation or approval shortcuts. Responses are not cached.
+
+The shared screen at `/` is now the post-login landing page. Deploy this backend before its matching frontend. There is no new migration or environment setting; existing Dockerfiles include the dashboard module. Real request transitions remain on the existing requisition and Board screens.
