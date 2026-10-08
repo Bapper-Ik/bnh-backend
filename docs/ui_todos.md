@@ -149,3 +149,10 @@ The owner clarified the refresh sequence: save without an HOD, provision an HOD,
 ## REQ-001 — same-account clarification; issue remains open (2026-10-08)
 
 The owner confirms the refresh used the original creator account. The account-switch explanation above is an unconfirmed hypothesis, not an established cause: another user's audit login cannot identify the session used by the reported browser tab. Read-only diagnostics still find the saved draft, update and cost lines for an active requester. The next necessary diagnostic is the exact page URL and visible state (empty list, empty creation form or detail error). No production behavior or access rule has been changed, and no live resolution is claimed.
+
+
+## REQ-001 — save then refresh before submission (2026-10-08)
+
+A successful new-draft POST now uses document navigation with history replacement to /requisitions/{id}. The saved ID becomes the page address before the detail API read completes, and browser Back no longer returns to the blank creation form that produced this record. Detail reload reads the stored record from the backend, independently of Review & Submit and HOD availability. The draft detail page confirms that the draft is saved. Existing-draft save completion now awaits its asynchronous refresh callback. No browser storage is used for requisition content or credentials.
+
+A real-backend browser regression delays the first detail read after the committed POST, refreshes, checks the saved description and three cost lines, goes back/forward, saves an edit, and refreshes again while submission stays blocked by the missing HOD. The original navigation failed the permanent-URL assertion; the updated flow passes. No migration or additional Render environment setting is needed; deploy the frontend change. The backend change provides only an isolated browser-fixture requester in a department with no HOD.

@@ -57,6 +57,9 @@ async def prepare() -> Settings:
         request_department = Department(entity_id=request_entity.id, name="Requisition Operations")
         session.add(request_department)
         await session.flush()
+        unassigned_department = Department(entity_id=request_entity.id, name="Awaiting HOD")
+        session.add(unassigned_department)
+        await session.flush()
         for role in (
             "owner",
             "peer",
@@ -67,6 +70,7 @@ async def prepare() -> Settings:
             "admin_peer",
             "managed",
             "requester",
+            "draft_requester",
             "hod",
             "chief_of_staff",
             "md",
@@ -92,6 +96,7 @@ async def prepare() -> Settings:
             )
             request_role = role in {
                 "requester",
+                "draft_requester",
                 "hod",
                 "chief_of_staff",
                 "md",
@@ -102,7 +107,11 @@ async def prepare() -> Settings:
                 Membership(
                     identity_id=identity.id,
                     entity_id=request_entity.id if request_role else entity.id,
-                    department_id=request_department.id if request_role else department.id,
+                    department_id=unassigned_department.id
+                    if role == "draft_requester"
+                    else request_department.id
+                    if request_role
+                    else department.id,
                 )
             )
             if role in {"hod", "chief_of_staff", "md", "secretary", "chairman"}:
