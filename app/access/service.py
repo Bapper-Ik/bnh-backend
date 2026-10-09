@@ -8,6 +8,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from app.access.models import ReviewGrant
 from app.access.principal import Principal
+from app.access.roles import is_system_administrator
 from app.board.models import ChairmanDecision, Resolution
 from app.core.errors import DomainError
 from app.evidence.models import Attachment
@@ -33,7 +34,10 @@ Action = Literal[
 ]
 
 
-def request_scope(actor: Principal, *, inbox: bool = False) -> ColumnElement[bool]:
+def request_scope(
+    actor: Principal, *, inbox: bool = False, include_oversight: bool = False
+) -> ColumnElement[bool]:
+    # Broad administrative reads must opt in; evidence/exports retain the strict default.
     now = datetime.now(UTC)
     pending_board = exists(
         select(Resolution.id).where(
@@ -166,16 +170,27 @@ def request_scope(actor: Principal, *, inbox: bool = False) -> ColumnElement[boo
         if actor.account.read_only
         else false()
     )
-    return or_(Requisition.requester_id == actor.id, offices, reviewer)
+    oversight = true() if include_oversight and is_system_administrator(actor) else false()
+    return or_(Requisition.requester_id == actor.id, offices, reviewer, oversight)
 
 
-async def can_read(session: AsyncSession, req: Requisition, actor: Actor) -> bool:
+async def can_read(
+    session: AsyncSession, req: Requisition, actor: Actor, *, include_oversight: bool = True
+) -> bool:
     return bool(
         await session.scalar(
             select(Requisition.id)
             .outerjoin(Revision, Revision.id == Requisition.current_revision_id)
-            .where(Requisition.id == req.id, request_scope(actor))
+            .where(
+                Requisition.id == req.id, request_scope(actor, include_oversight=include_oversight)
+            )
         )
+    )
+
+
+async def oversight_only(session: AsyncSession, req: Requisition, actor: Actor) -> bool:
+    return is_system_administrator(actor) and not await can_read(
+        session, req, actor, include_oversight=False
     )
 
 
@@ -198,7 +213,15 @@ async def require_action(
 ) -> None:
     if not await can_read(session, req, actor):
         raise DomainError("RESOURCE_NOT_AVAILABLE", "Requisition not found.", 404)
-    if action in {"read", "export"}:
+    if action == "read":
+        return
+    if action == "export":
+        if await oversight_only(session, req, actor):
+            raise DomainError(
+                "ACCESS_DENIED",
+                "Administrative visibility does not grant document export access.",
+                403,
+            )
         return
     if actor.account.read_only:
         raise DomainError(
@@ -250,6 +273,8 @@ async def require_attachment(
     if not attachment or attachment.detached:
         raise DomainError("RESOURCE_NOT_AVAILABLE", "Attachment not found.", 404)
     req = await get_scoped_request(session, attachment.requisition_id, actor)
+    if await oversight_only(session, req, actor):
+        raise DomainError("RESOURCE_NOT_AVAILABLE", "Attachment not found.", 404)
     if attachment.kind == "board_resolution":
         from app.board.service import board_access
 
@@ -258,9 +283,11 @@ async def require_attachment(
 
 
 def project_content(
-    content: dict[str, object], actor: Actor
+    content: dict[str, object], actor: Actor, *, oversight: bool = False
 ) -> tuple[dict[str, object], list[str]]:
-    if not actor.account.read_only:
+    if not actor.account.read_only and (
+        not oversight or "vendor:read_sensitive" in actor.account.permissions
+    ):
         return content, []
     projected = dict(content)
     vendor = content.get("vendor")

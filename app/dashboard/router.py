@@ -84,7 +84,7 @@ async def dashboard(
                 func.count().filter(Requisition.requester_id == actor.id),
             )
             .outerjoin(Revision, Revision.id == Requisition.current_revision_id)
-            .where(request_scope(actor))
+            .where(request_scope(actor, include_oversight=True))
             .group_by(Requisition.state)
         )
     ).all()
@@ -101,7 +101,7 @@ async def dashboard(
             .join(Requisition, Requisition.id == AuditEvent.resource_id)
             .outerjoin(Revision, Revision.id == Requisition.current_revision_id)
             .where(
-                request_scope(actor),
+                request_scope(actor, include_oversight=True),
                 or_(
                     AuditEvent.action.in_(PUBLIC_EVENTS),
                     AuditEvent.action.in_(BOARD_EVENTS) & Requisition.id.in_(board_requests(actor)),

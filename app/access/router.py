@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.access.models import ReviewGrant
 from app.access.service import (
     get_scoped_request,
+    oversight_only,
     request_scope,
     require_action,
     require_attachment,
@@ -70,7 +71,11 @@ async def capabilities(session: AsyncSession, req: Requisition, actor: Actor) ->
             actions.append(action)
         except DomainError:
             pass
-    return CapabilityView(requisition_id=req.id, actions=actions, read_only=actor.account.read_only)
+    return CapabilityView(
+        requisition_id=req.id,
+        actions=actions,
+        read_only=actor.account.read_only or await oversight_only(session, req, actor),
+    )
 
 
 @router.get("/requisitions", response_model=CapabilityPage)
@@ -83,7 +88,7 @@ async def scoped_list(
     query = (
         select(Requisition)
         .outerjoin(Revision, Revision.id == Requisition.current_revision_id)
-        .where(request_scope(actor))
+        .where(request_scope(actor, include_oversight=True))
     )
     count = await s.scalar(select(func.count()).select_from(query.subquery()))
     rows = (

@@ -86,6 +86,7 @@ async def prepare() -> Settings:
             "inviter",
             "admin",
             "admin_peer",
+            "oversight",
             "managed",
             "requester",
             "draft_requester",
@@ -105,7 +106,7 @@ async def prepare() -> Settings:
                     email=email,
                     password_hash=hasher.hash(password),
                     permissions=["staff:manage", "organisation:manage", "office_assignment:manage"]
-                    if role in {"admin", "admin_peer"}
+                    if role in {"admin", "admin_peer", "oversight"}
                     else ["staff:manage"]
                     if role in {"access", "inviter"}
                     else ["audit:read"]
@@ -123,17 +124,18 @@ async def prepare() -> Settings:
                 "secretary",
                 "chairman",
             }
-            session.add(
-                Membership(
-                    identity_id=identity.id,
-                    entity_id=request_entity.id if request_role else entity.id,
-                    department_id=unassigned_department.id
-                    if role == "draft_requester"
-                    else request_department.id
-                    if request_role
-                    else department.id,
+            if role != "oversight":
+                session.add(
+                    Membership(
+                        identity_id=identity.id,
+                        entity_id=request_entity.id if request_role else entity.id,
+                        department_id=unassigned_department.id
+                        if role == "draft_requester"
+                        else request_department.id
+                        if request_role
+                        else department.id,
+                    )
                 )
-            )
             if role in {"hod", "chief_of_staff", "md", "secretary", "chairman"}:
                 session.add(
                     Office(

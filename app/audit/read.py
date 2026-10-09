@@ -46,7 +46,7 @@ def visible_requests(actor: Actor):  # type: ignore[no-untyped-def]
     return (
         select(Requisition.id)
         .outerjoin(Revision, Revision.id == Requisition.current_revision_id)
-        .where(request_scope(actor))
+        .where(request_scope(actor, include_oversight=False))
     )
 
 

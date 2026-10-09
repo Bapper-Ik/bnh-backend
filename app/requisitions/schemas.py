@@ -132,6 +132,7 @@ class ChallengeView(BaseModel):
 
 
 class RequestView(BaseModel):
+    oversight_only: bool = False
     id: UUID
     reference: str
     entity_id: UUID

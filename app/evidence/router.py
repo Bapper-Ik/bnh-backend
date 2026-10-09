@@ -10,7 +10,12 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
-from app.access.service import get_scoped_request, require_action, require_attachment
+from app.access.service import (
+    get_scoped_request,
+    oversight_only,
+    require_action,
+    require_attachment,
+)
 from app.audit.service import record_event
 from app.core.database import get_session
 from app.core.errors import DomainError
@@ -45,6 +50,7 @@ def view(file: Attachment) -> AttachmentView:
 
 
 class AttachmentPage(BaseModel):
+    access_restricted: bool = False
     items: list[AttachmentView]
     request_version: int
     uploads_enabled: bool
@@ -61,6 +67,16 @@ async def listing(
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> AttachmentPage:
     req = await get_scoped_request(s, request_id, actor)
+    if await oversight_only(s, req, actor):
+        cfg = request.app.state.settings
+        return AttachmentPage(
+            items=[],
+            request_version=req.version,
+            uploads_enabled=False,
+            max_bytes=cfg.attachment_max_bytes,
+            max_count=cfg.attachment_max_count,
+            access_restricted=True,
+        )
     snapshot = await get_revision(s, req, revision) if revision else None
     files = (
         await s.scalars(

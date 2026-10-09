@@ -122,6 +122,12 @@ The owner selected the existing Cloudinary account for supporting documents (202
 - Require durable PostgreSQL and private evidence storage for production. Document migrations, readiness, workers, backup/isolated restore, and evidence archival. Verify before claiming deployment or protection.
 - Approved means authorised, not paid. No payment execution, legacy approval stages, ledgers, or operational Modules 2–4 in this release.
 
+## Administrator visibility decision (2026-10-09)
+
+The owner authorises full system administrators to view requisitions and vendors across BNH, including drafts and historical records in inactive companies. This supersedes earlier blanket exclusions of administrators from request visibility. A full administrator is an active, activated, writable account holding all three existing capabilities: staff:manage, organisation:manage and office_assignment:manage. Partial administrative capabilities alone do not grant this view.
+
+Administrative oversight grants read access to request lists/details/status/history/dashboard counts and vendor lists/details/company selection. It grants no financial office, membership, edit/submit/approve action, vendor write access, Audit Log access, or supporting-document/PDF/Board evidence access. Structured bank details stay redacted unless independently authorised; requester/assigned-office access continues to use its existing rules. Vendor writes and requisition creation still require genuine active membership. Recheck the permission bundle on every request; do not create fake memberships or modify live account permissions to enable the view.
+
 ## Delivery and verification
 
 - Implement stable feature IDs in dependency order with meaningful tests and documentation. Keep changes cohesive.

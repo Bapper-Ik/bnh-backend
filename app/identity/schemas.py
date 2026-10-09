@@ -18,6 +18,8 @@ class Reauthenticate(Command):
 
 
 class UserView(BaseModel):
+    is_system_administrator: bool = False
+    can_create_requisitions: bool = False
     id: UUID
     account_id: UUID
     name: str

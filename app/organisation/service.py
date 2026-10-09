@@ -9,6 +9,25 @@ from app.identity.models import Account
 from app.organisation.models import Department, Entity, Membership, Office
 
 
+async def has_active_membership(
+    session: AsyncSession, identity_id: UUID, entity_id: UUID | None = None
+) -> bool:
+    query = (
+        select(Membership.id)
+        .join(Entity, Entity.id == Membership.entity_id)
+        .join(Department, Department.id == Membership.department_id)
+        .where(
+            Membership.identity_id == identity_id,
+            Membership.active.is_(True),
+            Entity.active.is_(True),
+            Department.active.is_(True),
+        )
+    )
+    if entity_id is not None:
+        query = query.where(Membership.entity_id == entity_id)
+    return await session.scalar(query.limit(1)) is not None
+
+
 async def membership(session: AsyncSession, identity_id: UUID, entity_id: UUID) -> Membership:
     member = await session.scalar(
         select(Membership)

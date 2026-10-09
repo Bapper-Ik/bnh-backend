@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.access.service import project_content, require_action
+from app.access.service import oversight_only, project_content, require_action
 from app.authority.policy import calculate_lines, resolve
 from app.core.database import Identity
 from app.core.errors import DomainError
@@ -233,7 +233,8 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
 
     history = await history_page(s, req, actor)
     pending = await next_action(s, req, revision)
-    projected, redacted = project_content(req.content, actor)
+    oversight = await oversight_only(s, req, actor)
+    projected, redacted = project_content(req.content, actor, oversight=oversight)
     if (
         req.context.get("bank_details_state") == "restricted"
         and "vendor.bank_details" not in redacted
@@ -242,6 +243,7 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
     if actor.account.read_only:
         actions = []
     return RequestView(
+        oversight_only=oversight,
         id=req.id,
         entity_id=req.entity_id,
         reference=req.reference,
@@ -345,7 +347,7 @@ async def revision_view(
 ) -> RequestView:
     revision = await get_revision(s, req, number)
     result = await present(s, req, actor)
-    projected, redacted = project_content(revision.content, actor)
+    projected, redacted = project_content(revision.content, actor, oversight=result.oversight_only)
     decision = await s.scalar(select(Decision).where(Decision.revision_id == revision.id))
     state = {"approve": "APPROVED", "reject": "REJECTED", "return": "RETURNED_FOR_REVISION"}.get(
         decision.action if decision else "",

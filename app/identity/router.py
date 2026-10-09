@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.access.permissions import ADMIN_PERMISSIONS, READ_PERMISSIONS
+from app.access.roles import is_system_administrator
 from app.audit.service import record_event
 from app.core.database import Identity, get_session
 from app.core.errors import DomainError
@@ -23,13 +24,16 @@ from app.identity.service import (
     require_origin,
     require_permission,
 )
-from app.organisation.service import has_approval_office
+from app.organisation.service import has_active_membership, has_approval_office
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
 
 async def user_view(actor: Actor, session: AsyncSession) -> UserView:
     return UserView(
+        is_system_administrator=is_system_administrator(actor),
+        can_create_requisitions=not actor.account.read_only
+        and await has_active_membership(session, actor.id),
         id=actor.id,
         account_id=actor.account.id,
         name=actor.identity.display_name,

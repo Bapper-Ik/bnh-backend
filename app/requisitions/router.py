@@ -9,7 +9,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.access.service import get_scoped_request as get_request
-from app.access.service import project_content, request_scope, require_action
+from app.access.service import oversight_only, project_content, request_scope, require_action
 from app.audit.models import OutboxItem
 from app.audit.service import AuditDetails, record_event
 from app.core.database import Identity, get_session
@@ -78,7 +78,7 @@ async def list_requests(
     actor: Actor = Depends(current_actor),
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> Page:
-    condition = request_scope(actor, inbox=filters.inbox)
+    condition = request_scope(actor, inbox=filters.inbox, include_oversight=True)
     query = (
         select(Requisition, Revision, Identity, Entity.name, Department.name)
         .outerjoin(Revision, Revision.id == Requisition.current_revision_id)
@@ -241,7 +241,11 @@ async def start_revision(
         if cached.payload_digest != payload:
             raise DomainError("IDEMPOTENCY_CONFLICT", "This key was used for a different action.")
         result = RequestView.model_validate(cached.result)
-        content, redacted = project_content(result.content.model_dump(mode="json"), actor)
+        content, redacted = project_content(
+            result.content.model_dump(mode="json"),
+            actor,
+            oversight=await oversight_only(s, req, actor),
+        )
         return result.model_copy(
             update={
                 "content": result.content.model_validate(content),
@@ -389,7 +393,11 @@ async def act(
         if cached.payload_digest != payload_hash:
             raise DomainError("IDEMPOTENCY_CONFLICT", "This key was used for a different action.")
         result = RequestView.model_validate(cached.result)
-        content, redacted = project_content(result.content.model_dump(mode="json"), actor)
+        content, redacted = project_content(
+            result.content.model_dump(mode="json"),
+            actor,
+            oversight=await oversight_only(s, req, actor),
+        )
         return result.model_copy(
             update={
                 "content": result.content.model_validate(content),

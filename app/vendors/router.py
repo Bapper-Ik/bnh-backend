@@ -1,18 +1,59 @@
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from pydantic import BaseModel
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access.roles import is_system_administrator
 from app.core.database import get_session
 from app.core.errors import DomainError
 from app.identity.service import Actor, current_actor
+from app.organisation.models import Department, Entity, Membership
 from app.organisation.service import membership
 from app.vendors.models import Vendor, VendorVersion
 from app.vendors.schemas import CreateVendor, UpdateVendor, VendorPage, VendorSummary, VendorView
 from app.vendors.service import add_version, require_write, scoped_vendor, view
 
 router = APIRouter(prefix="/api/v1/vendors", tags=["Vendors"])
+
+
+class VendorCompany(BaseModel):
+    entity_id: UUID
+    entity_name: str
+    active: bool
+    can_create: bool
+
+
+@router.get("/companies", response_model=list[VendorCompany])
+async def vendor_companies(
+    actor: Actor = Depends(current_actor),
+    s: AsyncSession = Depends(get_session, scope="function"),
+) -> list[VendorCompany]:
+    member = exists(
+        select(Membership.id)
+        .join(Department, Department.id == Membership.department_id)
+        .where(
+            Membership.identity_id == actor.id,
+            Membership.entity_id == Entity.id,
+            Membership.active.is_(True),
+            Department.active.is_(True),
+            Entity.active.is_(True),
+        )
+    ).correlate(Entity)
+    query = select(Entity, member.label("member"))
+    if not is_system_administrator(actor):
+        query = query.where(member)
+    rows = (await s.execute(query.order_by(Entity.name, Entity.id))).all()
+    return [
+        VendorCompany(
+            entity_id=e.id,
+            entity_name=e.name,
+            active=e.active,
+            can_create=bool(is_member) and not actor.account.read_only,
+        )
+        for e, is_member in rows
+    ]
 
 
 @router.get("", response_model=VendorPage)
@@ -24,7 +65,10 @@ async def list_vendors(
     actor: Actor = Depends(current_actor),
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> VendorPage:
-    await membership(s, actor.id, entity_id)
+    if not is_system_administrator(actor):
+        await membership(s, actor.id, entity_id)
+    elif not await s.get(Entity, entity_id):
+        raise DomainError("RESOURCE_NOT_AVAILABLE", "Company not found.", 404)
     query = (
         select(Vendor, VendorVersion)
         .join(VendorVersion, VendorVersion.id == Vendor.current_version_id)
@@ -80,7 +124,7 @@ async def vendor_detail(
     actor: Actor = Depends(current_actor),
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> VendorView:
-    vendor = await scoped_vendor(s, vendor_id, actor)
+    vendor = await scoped_vendor(s, vendor_id, actor, read_only_oversight=True)
     version = await s.get(VendorVersion, vendor.current_version_id)
     assert version
     return await view(s, vendor, version, actor)
@@ -109,7 +153,7 @@ async def version_detail(
     actor: Actor = Depends(current_actor),
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> VendorView:
-    vendor = await scoped_vendor(s, vendor_id, actor)
+    vendor = await scoped_vendor(s, vendor_id, actor, read_only_oversight=True)
     version = await s.scalar(
         select(VendorVersion).where(
             VendorVersion.vendor_id == vendor.id, VendorVersion.number == number

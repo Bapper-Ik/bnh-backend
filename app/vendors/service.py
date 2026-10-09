@@ -3,18 +3,24 @@ from uuid import UUID, uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.access.roles import is_system_administrator
 from app.audit.service import AuditDetails, record_event
 from app.core.errors import DomainError
 from app.identity.service import Actor
-from app.organisation.service import membership
+from app.organisation.service import has_active_membership, membership
 from app.vendors.models import BeneficiaryVersion, Vendor, VendorVersion
 from app.vendors.schemas import BankDetails, VendorData, VendorView
 
 
-async def scoped_vendor(session: AsyncSession, vendor_id: UUID, actor: Actor) -> Vendor:
+async def scoped_vendor(
+    session: AsyncSession, vendor_id: UUID, actor: Actor, *, read_only_oversight: bool = False
+) -> Vendor:
     vendor = await session.scalar(select(Vendor).where(Vendor.id == vendor_id).with_for_update())
     if not vendor:
         raise DomainError("RESOURCE_NOT_AVAILABLE", "Vendor not found.", 404)
+    # Only GET detail handlers opt in; all mutation callers retain membership checks.
+    if read_only_oversight and is_system_administrator(actor):
+        return vendor
     try:
         await membership(session, actor.id, vendor.entity_id)
     except DomainError as exc:
@@ -95,7 +101,8 @@ async def view(
     return VendorView(
         can_update=allowed
         and (vendor.created_by == actor.id or "vendor:update" in actor.account.permissions)
-        and version.number == vendor.version,
+        and version.number == vendor.version
+        and await has_active_membership(session, actor.id, vendor.entity_id),
         id=vendor.id,
         entity_id=vendor.entity_id,
         version=version.number,
