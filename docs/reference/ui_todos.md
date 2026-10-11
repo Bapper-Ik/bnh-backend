@@ -348,3 +348,30 @@ New submissions use bnh-doa-v2. A unique current HOD of the requester’s own de
 Screen 12 → Departments → Sub-Account reuses the bank drawer. GET/PUT `/organisation/departments/{department_id}/debit-account` uses the existing DebitAccountView/Update schema, `organisation:manage`, active scope, ten-digit string validation, expected-version conflicts and atomic audit. No settings are exposed to ordinary HODs.
 
 Approval challenge `transfer_details` now includes `debit_source` (`company` or `department`), optional `department_id` and `department_name`. Show the source and exact account details before signing. Eligible self-approvals use only the department account; other routes use the company account. Missing details are shown before approval and create an explicit unavailable letter, never a silent fallback. Changing the account invalidates a prepared challenge; later edits cannot rewrite an approved letter. Deploy backend migration 0020 before the updated frontend. No environment variables are added.
+
+
+## WEB-002 — Simplified login design (2026-10-11)
+
+Removed the standalone company name, workspace eyebrow and invitation notice from Sign In. The login-only layout now centres the existing brand and form inside a responsive card, aligns Forgot Password? beside Password, enlarges inputs/actions and centres the copyright footer. The password visibility control, accessible labels, sign-in errors and session/recovery behavior remain intact.
+
+Verification: npm run lint, npm run format:check, npm run typecheck, npm run test -- --run (6 passed) and npm run build passed. The frontend Docker build also passed. The 12 connected account-access, mobile-shell, responsive-content and security Playwright journeys passed against a fresh isolated local PostgreSQL backend. Responsive assertions cover 320, 390, 768, 1024 and 1440px; login screenshots at 390px and 1440px were visually inspected. Backend source is unchanged; its static checks and 15 PDF regression tests also passed during isolated test setup. No migration or new configuration is required; deploy the frontend to publish the design.
+
+
+## WEB-002 — Login brand alignment and recovery link (2026-10-11)
+
+Moved Forgot Password? below the Sign In button and centred it. Enlarged the login brand name from 21px to 30px and the logo frame to 72px, with explicit line heights and an optical offset for the source image’s white padding. Changes apply only to login branding. Authentication and recovery behavior remain unchanged.
+
+Verification: frontend lint, format and type checks, six unit tests, production build and all ten connected account-access/mobile-shell/responsive-content browser checks passed on isolated local PostgreSQL. The responsive checks cover widths from 320px to 1440px; mobile and desktop login screenshots were visually inspected. The frontend Docker build also passed. No API, migration or configuration changes.
+
+Login divider follow-up: added a thin vertical separator between the login logo and brand name. Frontend lint/format/type checks, six unit tests, production build and all six mobile-shell/responsive-content browser journeys passed; responsive checks include 320px through 1440px, and the mobile login screenshot was visually inspected. No API or configuration changes.
+
+Login wording follow-up: the login field is now Staff Email and the brand subtitle is exactly “by Brendan Nicholas Holdings”. The subtitle can wrap within the brand block on narrow screens; the existing divider remains. Updated the browser sign-in selectors while retaining the labels on other screens. Frontend lint/format/type checks, six unit tests, production build and the full 54-journey browser suite passed on isolated local PostgreSQL. The 320px login screenshot was visually inspected. No API, migration or configuration changes.
+
+
+## REQ-001 — Three-letter department references
+
+New draft references use BNH-{CODE}-{serial}, where CODE is the requester’s server-derived department code, exactly three ASCII letters stored uppercase (for example BNH-FIN-000020). Administrators choose codes through Organisation & Authority → Departments → Add/Edit. Codes are unique within each company ignoring case; changes require the current directory version and atomic audit. The existing database sequence remains shared across departments/companies and is not reset or reused. UUIDs remain internal identifiers. Existing references stay frozen when department names/codes change. Existing departments with non-three-letter codes must be configured before creating new drafts; DEPARTMENT_CODE_REQUIRED is an explicit 409. Existing draft editing, retries and submission remain available. No migration or environment variable is added.
+
+POST /organisation/departments now requires code. Both department PATCH endpoints accept code; code changes require expected_version. Company code rules remain unchanged. The workspace screen validates three letters, shows older departments needing setup, and preserves entries after conflicts. Regenerated OpenAPI/types describe DepartmentEdit and DepartmentUpdate. Deploy backend and frontend together, then configure existing department codes before new request creation.
+
+The new-request form treats DEPARTMENT_CODE_REQUIRED as a retryable setup condition, preserving entries and leaving Save Draft available. Verification: full 54-browser suite plus the final 14-case organisation/requisition run (55 distinct journeys), six unit tests, static/type/format checks, production build and both Docker builds passed; backend verification is recorded in task_done.md.

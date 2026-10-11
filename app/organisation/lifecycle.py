@@ -2,8 +2,8 @@ import hashlib
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select, text
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import record_event
@@ -13,6 +13,7 @@ from app.identity.models import Account
 from app.identity.recovery import revoke_sessions
 from app.identity.schemas import Command
 from app.identity.service import Actor, current_actor, require_permission
+from app.organisation.codes import DepartmentCode
 from app.organisation.models import Department, Entity, Membership
 
 router = APIRouter(prefix="/api/v1/organisation", tags=["Organisation"])
@@ -22,6 +23,16 @@ class DirectoryUpdate(Command):
     expected_version: str | None = Field(default=None, min_length=64, max_length=64)
     name: str | None = Field(default=None, min_length=2, max_length=180)
     active: bool | None = None
+
+
+class DepartmentUpdate(DirectoryUpdate):
+    code: DepartmentCode | None = None
+
+    @model_validator(mode="after")
+    def code_requires_version(self) -> "DepartmentUpdate":
+        if self.code is not None and self.expected_version is None:
+            raise ValueError("Supply the current version when changing a department code")
+        return self
 
 
 class DirectoryView(BaseModel):
@@ -97,7 +108,7 @@ async def update_entity(
 @router.patch("/departments/{department_id}", response_model=DirectoryView)
 async def update_department(
     department_id: UUID,
-    body: DirectoryUpdate,
+    body: DepartmentUpdate,
     actor: Actor = Depends(current_actor),
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> DirectoryView:
@@ -127,6 +138,18 @@ async def update_department(
         raise DomainError(
             "VALIDATION_FAILED", "Department name already exists in this company.", 422
         )
+    if body.code is not None:
+        if await s.scalar(
+            select(Department.id).where(
+                Department.id != department_id,
+                Department.entity_id == scope,
+                func.upper(Department.code) == body.code,
+            )
+        ):
+            raise DomainError(
+                "VALIDATION_FAILED", "Department code already exists in this company.", 422
+            )
+        department.code = body.code
     apply_update(department, body)
     await record_event(
         s,

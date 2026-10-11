@@ -64,17 +64,26 @@ async def prepare() -> Settings:
         entity = Entity(name="Synthetic browser company " + uuid4().hex)
         session.add(entity)
         await session.flush()
-        department = Department(entity_id=entity.id, name="Operations")
+        department = Department(entity_id=entity.id, name="Operations", code="OPS")
         session.add(department)
         await session.flush()
         request_entity = Entity(name="Synthetic requisition company " + uuid4().hex)
         session.add(request_entity)
         await session.flush()
-        request_department = Department(entity_id=request_entity.id, name="Requisition Operations")
+        request_department = Department(
+            entity_id=request_entity.id, name="Requisition Operations", code="REQ"
+        )
         session.add(request_department)
         await session.flush()
-        unassigned_department = Department(entity_id=request_entity.id, name="Awaiting HOD")
+        unassigned_department = Department(
+            entity_id=request_entity.id, name="Awaiting HOD", code="AWH"
+        )
         session.add(unassigned_department)
+        await session.flush()
+        legacy_department = Department(
+            entity_id=request_entity.id, name="Legacy Department", code="LEGACY"
+        )
+        session.add(legacy_department)
         await session.flush()
         for role in (
             "owner",
@@ -90,6 +99,7 @@ async def prepare() -> Settings:
             "managed",
             "requester",
             "draft_requester",
+            "code_requester",
             "hod",
             "chief_of_staff",
             "md",
@@ -118,6 +128,7 @@ async def prepare() -> Settings:
             request_role = role in {
                 "requester",
                 "draft_requester",
+                "code_requester",
                 "hod",
                 "chief_of_staff",
                 "md",
@@ -129,7 +140,9 @@ async def prepare() -> Settings:
                     Membership(
                         identity_id=identity.id,
                         entity_id=request_entity.id if request_role else entity.id,
-                        department_id=unassigned_department.id
+                        department_id=legacy_department.id
+                        if role == "code_requester"
+                        else unassigned_department.id
                         if role == "draft_requester"
                         else request_department.id
                         if request_role

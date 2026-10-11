@@ -26,7 +26,7 @@ async def scope_data(sessions):
         companies = [Entity(name=f"Synthetic scope company {uuid4()}") for _ in range(2)]
         s.add_all(companies)
         await s.flush()
-        departments = [Department(entity_id=e.id, name="Operations") for e in companies]
+        departments = [Department(entity_id=e.id, name="Operations", code="OPS") for e in companies]
         s.add_all(departments)
         await s.flush()
         for role in (

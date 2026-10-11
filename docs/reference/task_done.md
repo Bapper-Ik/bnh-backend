@@ -429,3 +429,30 @@ Verification: Ruff check/format and mypy passed. The full isolated-PostgreSQL ru
 Frontend lint/format/type checks, six unit tests, production build and all 54 connected browser journeys passed. The new mobile journey saves/reopens department settings, submits as HOD, opens My Tasks, signs the exact sub-account instruction, downloads the letter and verifies removal from the queue. Its mobile account/signing layouts were inspected and viewport-overflow checks passed. Both Docker builds passed; OpenAPI and frontend types were regenerated.
 
 Deploy backend migration 0020 before the frontend, then configure each applicable department sub-account through Organisation & Authority before approving new own-HOD requests. No new environment variables. Existing signed requests/letters are not migrated or rewritten. Live deployment/provider behavior and genuine staff acceptance remain separate from local verification.
+
+
+## WEB-002 — Simplified login design (2026-10-11)
+
+Removed the standalone company name, workspace eyebrow and invitation notice from Sign In. The login-only layout now centres the existing brand and form inside a responsive card, aligns Forgot Password? beside Password, enlarges inputs/actions and centres the copyright footer. The password visibility control, accessible labels, sign-in errors and session/recovery behavior remain intact.
+
+Verification: npm run lint, npm run format:check, npm run typecheck, npm run test -- --run (6 passed) and npm run build passed. The frontend Docker build also passed. The 12 connected account-access, mobile-shell, responsive-content and security Playwright journeys passed against a fresh isolated local PostgreSQL backend. Responsive assertions cover 320, 390, 768, 1024 and 1440px; login screenshots at 390px and 1440px were visually inspected. Backend source is unchanged; its static checks and 15 PDF regression tests also passed during isolated test setup. No migration or new configuration is required; deploy the frontend to publish the design.
+
+
+## WEB-002 — Login brand alignment and recovery link (2026-10-11)
+
+Moved Forgot Password? below the Sign In button and centred it. Enlarged the login brand name from 21px to 30px and the logo frame to 72px, with explicit line heights and an optical offset for the source image’s white padding. Changes apply only to login branding. Authentication and recovery behavior remain unchanged.
+
+Verification: frontend lint, format and type checks, six unit tests, production build and all ten connected account-access/mobile-shell/responsive-content browser checks passed on isolated local PostgreSQL. The responsive checks cover widths from 320px to 1440px; mobile and desktop login screenshots were visually inspected. The frontend Docker build also passed. No API, migration or configuration changes.
+
+Login divider follow-up: added a thin vertical separator between the login logo and brand name. Frontend lint/format/type checks, six unit tests, production build and all six mobile-shell/responsive-content browser journeys passed; responsive checks include 320px through 1440px, and the mobile login screenshot was visually inspected. No API or configuration changes.
+
+Login wording follow-up: the login field is now Staff Email and the brand subtitle is exactly “by Brendan Nicholas Holdings”. The subtitle can wrap within the brand block on narrow screens; the existing divider remains. Updated the browser sign-in selectors while retaining the labels on other screens. Frontend lint/format/type checks, six unit tests, production build and the full 54-journey browser suite passed on isolated local PostgreSQL. The 320px login screenshot was visually inspected. No API, migration or configuration changes.
+
+
+## REQ-001 — Administrator-selected department reference codes (2026-10-11)
+
+New requisitions use BNH-{CODE}-{shared serial}, for example BNH-FIN-000020. Reused the existing department Code field: administrators supply exactly three ASCII letters, stored uppercase, unique within the company ignoring case. Add/Edit supports code configuration with optimistic versions and transactional audit. References use the locked requester membership and remain frozen after code/name changes; internal UUIDs and the existing shared sequence are retained. Old non-three-letter codes are flagged and produce an explicit DEPARTMENT_CODE_REQUIRED on new creation. The requester form preserves entries and allows retry after setup; existing drafts and signed requests remain usable.
+
+Verification: Ruff check/format and mypy passed; all 420 backend tests passed on fresh isolated PostgreSQL. The four department-code tests also passed after strengthening the audit-failure assertion. Coverage includes administrator-only writes, exact ASCII length, uppercase normalization, same-company duplicates and concurrent edits, required/stale versions, audit rollback, simultaneous creation/retries, shared numbering across departments, preserved references after name/code edits and older-code setup without blocking saved-request submission. Frontend lint/format/type checks, six unit tests, production build and the full 54-journey browser suite passed. After the final form retry fix, all 14 organisation/requisition journeys passed, including the new live two-session code-setup and retry case (55 distinct browser journeys verified). Mobile department editing was visually inspected; responsive checks passed. Both final Docker builds passed; OpenAPI/types were regenerated.
+
+Deploy backend and frontend together, then set existing department abbreviations in Organisation & Authority → Departments → Edit Department before staff create new requisitions. No migration, environment setting or counter reset. Existing references and PDF evidence are not renamed. No production records were changed during implementation.

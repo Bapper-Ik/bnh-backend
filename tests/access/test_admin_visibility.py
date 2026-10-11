@@ -48,7 +48,7 @@ async def test_full_admin_without_membership_sees_cross_company_drafts_and_count
         entity = Entity(name="Synthetic oversight second " + str(uuid4()))
         s.add(entity)
         await s.flush()
-        dept = Department(entity_id=entity.id, name="Second department")
+        dept = Department(entity_id=entity.id, name="Second department", code="SEC")
         s.add(dept)
         await s.flush()
         s.add(

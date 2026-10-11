@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated, Literal
@@ -183,11 +184,20 @@ async def create(
             )
         return await present(s, existing, actor)
     member = await membership(s, actor.id, body.entity_id)
+    department_code = await s.scalar(
+        select(Department.code).where(Department.id == member.department_id)
+    )
+    if not department_code or not re.fullmatch(r"[A-Za-z]{3}", department_code):
+        raise DomainError(
+            "DEPARTMENT_CODE_REQUIRED",
+            "Ask an administrator to set your department's three-letter code before creating a requisition.",
+            409,
+        )
     context = await select_vendor(s, actor, body.entity_id, body)
     serial = await s.scalar(text("SELECT nextval('custodian.request_reference')"))
     req = Requisition(
         id=uuid4(),
-        reference=f"BNH-{datetime.now(UTC).year}-{serial:06d}",
+        reference=f"BNH-{department_code.upper()}-{serial:06d}",
         requester_id=actor.id,
         entity_id=body.entity_id,
         department_id=member.department_id,

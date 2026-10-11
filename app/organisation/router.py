@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
-from sqlalchemy import or_, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
@@ -14,6 +14,7 @@ from app.core.errors import DomainError
 from app.identity.models import Account
 from app.identity.schemas import Command
 from app.identity.service import Actor, current_actor, hasher, require_permission
+from app.organisation.codes import DepartmentCode
 from app.organisation.models import Department, Entity, Membership, Office
 
 router = APIRouter(prefix="/api/v1/organisation", tags=["Organisation"])
@@ -42,6 +43,7 @@ class EntityInput(DirectoryInput):
 
 class DepartmentInput(DirectoryInput):
     entity_id: UUID
+    code: DepartmentCode
 
 
 class StaffInput(Command):
@@ -215,7 +217,7 @@ async def create_department(
     if await s.scalar(
         select(Department.id).where(
             Department.entity_id == body.entity_id,
-            or_(Department.name == body.name, Department.code == body.code),
+            or_(Department.name == body.name, func.upper(Department.code) == body.code),
         )
     ):
         raise DomainError("VALIDATION_FAILED", "Department name or code already exists.", 422)

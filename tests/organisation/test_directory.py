@@ -53,7 +53,11 @@ async def directory(settings, sessions):
             for index in range(2):
                 department = await client.post(
                     "/api/v1/organisation/departments",
-                    json={"entity_id": entity, "name": f"Department {index}"},
+                    json={
+                        "entity_id": entity,
+                        "name": f"Department {index}",
+                        "code": ["OPS", "SUP"][index],
+                    },
                 )
                 assert department.status_code == 201, department.text
                 departments.append(department.json()["id"])

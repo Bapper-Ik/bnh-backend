@@ -24,7 +24,7 @@ async def vendor_context(settings, sessions):
         entities = [Entity(name=f"Synthetic vendor company {uuid4()}") for _ in range(2)]
         s.add_all(entities)
         await s.flush()
-        departments = [Department(entity_id=e.id, name="Operations") for e in entities]
+        departments = [Department(entity_id=e.id, name="Operations", code="OPS") for e in entities]
         s.add_all(departments)
         await s.flush()
         for index in range(3):

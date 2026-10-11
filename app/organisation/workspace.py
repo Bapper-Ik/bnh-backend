@@ -15,6 +15,7 @@ from app.core.errors import DomainError
 from app.identity.models import Account
 from app.identity.service import Actor, current_actor, require_permission
 from app.organisation.lifecycle import (
+    DepartmentUpdate,
     DirectoryUpdate,
     directory_version,
     update_department,
@@ -43,6 +44,16 @@ class OrganisationEdit(DirectoryUpdate):
     def has_change(self) -> "OrganisationEdit":
         if self.name is None and self.active is None:
             raise ValueError("Supply a name or enabled state")
+        return self
+
+
+class DepartmentEdit(DepartmentUpdate):
+    expected_version: str = Field(min_length=64, max_length=64)
+
+    @model_validator(mode="after")
+    def has_change(self) -> "DepartmentEdit":
+        if self.name is None and self.active is None and self.code is None:
+            raise ValueError("Supply a name, code or enabled state")
         return self
 
 
@@ -272,7 +283,7 @@ async def edit_company(
 @router.patch("/departments/{department_id}", response_model=OrganisationRecord)
 async def edit_department(
     department_id: UUID,
-    body: OrganisationEdit,
+    body: DepartmentEdit,
     actor: Actor = Depends(current_actor),
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> OrganisationRecord:

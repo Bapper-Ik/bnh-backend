@@ -14,7 +14,7 @@ from app.core.errors import DomainError
 from app.evidence.models import Attachment
 from app.identity.models import Account
 from app.main import create_app
-from app.organisation.models import Office
+from app.organisation.models import Department, Membership, Office
 from app.requisitions.models import Revision, SigningChallenge
 from tests.requisitions.test_workflow import (  # noqa: F401
     PASSWORD,
@@ -672,3 +672,76 @@ async def test_draft_survives_new_application_and_another_actor_cannot_use_its_c
             response = await other.post(f"/api/v1/requisitions/{own['id']}/actions", json=command)
             assert response.status_code == 409 and response.json()["code"] == "SIGNATURE_INVALID"
             assert (await other.get("/api/v1/requisitions/" + own["id"])).json()["state"] == "DRAFT"
+
+
+async def test_department_references_are_unique_and_stable_across_code_changes(
+    context, organisation, sessions
+):
+    client, _, _ = context
+    people = organisation["people"]
+    await sign_in(client, people["staff"])
+    body = {"entity_id": organisation["entity_id"], "creation_key": str(uuid4()), "content": {}}
+    duplicate = await asyncio.gather(
+        *[client.post("/api/v1/requisitions", json=body) for _ in range(2)]
+    )
+    assert all(r.status_code == 201 for r in duplicate)
+    original = duplicate[0].json()
+    assert original["id"] == duplicate[1].json()["id"]
+    assert original["reference"] == duplicate[1].json()["reference"]
+    assert original["reference"].startswith("BNH-OPS-")
+    results = await asyncio.gather(
+        *[
+            client.post("/api/v1/requisitions", json={**body, "creation_key": str(uuid4())})
+            for _ in range(4)
+        ]
+    )
+    assert all(r.status_code == 201 for r in results)
+    refs = [original["reference"], *[r.json()["reference"] for r in results]]
+    assert len(set(refs)) == 5
+    serials = [int(ref.rsplit("-", 1)[1]) for ref in refs]
+    assert all(len(ref.rsplit("-", 1)[1]) >= 6 for ref in refs)
+    await sign_in(client, people["other_hod"])
+    other = await client.post("/api/v1/requisitions", json={**body, "creation_key": str(uuid4())})
+    assert other.status_code == 201
+    assert other.json()["reference"].startswith("BNH-OTH-")
+    assert int(other.json()["reference"].rsplit("-", 1)[1]) > max(serials)
+    async with sessions() as s, s.begin():
+        dept = await s.scalar(
+            select(Department)
+            .join(Membership, Membership.department_id == Department.id)
+            .where(Membership.identity_id == people["staff"]["id"])
+        )
+        dept.code = "FIN"
+        dept.name = "Renamed department"
+    await sign_in(client, people["staff"])
+    assert (await client.post("/api/v1/requisitions", json=body)).json()["reference"] == original[
+        "reference"
+    ]
+    assert (await client.get("/api/v1/requisitions/" + original["id"])).json()[
+        "reference"
+    ] == original["reference"]
+    new = await client.post("/api/v1/requisitions", json={**body, "creation_key": str(uuid4())})
+    assert new.status_code == 201 and new.json()["reference"].startswith("BNH-FIN-")
+
+
+async def test_legacy_department_codes_block_only_new_drafts(context, organisation, sessions):
+    client, _, _ = context
+    person = organisation["people"]["staff"]
+    await sign_in(client, person)
+    req = await draft(client, organisation, "20")
+    async with sessions() as s, s.begin():
+        dept = await s.scalar(
+            select(Department)
+            .join(Membership, Membership.department_id == Department.id)
+            .where(Membership.identity_id == person["id"])
+        )
+        dept.code = "LEGACY_LONG_CODE"
+    blocked = await client.post(
+        "/api/v1/requisitions",
+        json={"entity_id": organisation["entity_id"], "creation_key": str(uuid4()), "content": {}},
+    )
+    assert blocked.status_code == 409 and blocked.json()["code"] == "DEPARTMENT_CODE_REQUIRED"
+    saved = await client.get("/api/v1/requisitions/" + req["id"])
+    assert saved.status_code == 200 and saved.json()["reference"] == req["reference"]
+    submitted, _ = await signed(client, saved.json(), person, "submit")
+    assert submitted["reference"] == req["reference"] and submitted["state"] == "PENDING_AUTHORITY"

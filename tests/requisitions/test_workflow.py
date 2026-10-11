@@ -22,8 +22,8 @@ async def organisation(sessions):
         entity = Entity(name=f"Synthetic company {uuid4()}")
         s.add(entity)
         await s.flush()
-        department = Department(entity_id=entity.id, name="Operations")
-        other_department = Department(entity_id=entity.id, name="Other department")
+        department = Department(entity_id=entity.id, name="Operations", code="OPS")
+        other_department = Department(entity_id=entity.id, name="Other department", code="OTH")
         s.add_all([department, other_department])
         await s.flush()
         for role in ["staff", "hod", "chief_of_staff", "md", "secretary", "chairman", "other_hod"]:
