@@ -67,7 +67,7 @@ def test_multipage_layout_exact_decimal_escaped_text_and_page_numbers(pdf_fonts,
         assert f"Page {number} of {len(pages)}" in page
         assert page.count("Amount (NGN)") <= 1
     assert text.count("Amount (NGN)") > 5
-    assert text.index("01 Jan 2026, 01:00:00 WAT") < text.index("PDF generated")
+    assert "SHA-256" not in text and "Export verification" not in text
 
 
 def test_unsupported_character_and_bad_total_fail_explicitly(pdf_fonts):
@@ -156,14 +156,14 @@ def pdf_pages(snapshot, pdf_fonts, **kwargs):
     return PdfReader(io.BytesIO(data)).pages, data
 
 
-def test_template_summary_and_side_by_side_signatures_with_separate_verification(
+def test_template_summary_and_side_by_side_signatures_without_internal_metadata(
     pdf_fonts, tmp_path
 ):
     import xml.etree.ElementTree as ET
 
     pages, data = pdf_pages(approved_sample(), pdf_fonts)
-    assert len(pages) == 2
-    first, appendix = [page.extract_text() for page in pages]
+    assert len(pages) == 1
+    first = pages[0].extract_text()
     for label in [
         "Approved Requisition",
         "TOTAL",
@@ -182,8 +182,8 @@ def test_template_summary_and_side_by_side_signatures_with_separate_verification
         assert label in first
     assert "11 Oct 2026, 12:00 WAT" in first  # Actual decision, not export time.
     assert "a" * 64 not in first and "b" * 64 not in first
-    assert "a" * 64 in appendix and "b" * 64 in appendix and "c" * 64 in appendix
-    assert "Template: requisition-v2" in appendix
+    assert "c" * 64 not in first
+    assert "Signature reference" not in first and "Template:" not in first
     path = tmp_path / "aligned.pdf"
     path.write_bytes(data)
     xml = subprocess.check_output(["pdftotext", "-bbox", str(path), "-"], text=True)
@@ -221,7 +221,8 @@ def test_template_preserves_nonapproved_states_and_restricted_banks(pdf_fonts, s
 def test_legacy_template_remains_available_for_predeployment_jobs(pdf_fonts):
     pages, _ = pdf_pages(sample(), pdf_fonts, template_version="requisition-v1")
     text = "".join(page.extract_text() for page in pages)
-    assert "Requisition and approval record" in text and "Template: requisition-v1" in text
+    assert "Requisition and approval record" in text
+    assert "SHA-256" not in text and "Export reference" not in text
     with pytest.raises(RenderFailure, match="unsupported_template"):
         pdf_pages(sample(), pdf_fonts, template_version="unknown")
 
@@ -237,3 +238,30 @@ def test_long_scope_starts_on_summary_page_and_continues_without_loss(pdf_fonts)
     for word in ("Detailed", "commissioning", "requirements."):
         assert text.count(word) == 70
     assert "5. Declaration" in text and "6. Approval" in text
+
+
+@pytest.mark.parametrize("template", ["requisition-v1", "requisition-v2"])
+def test_extra_details_preserve_business_evidence_without_exposing_internal_ids(
+    pdf_fonts, template
+):
+    snapshot = approved_sample(
+        evidence=[dict(id="private-attachment-id", filename="supplier-quote.pdf", digest="d" * 64)]
+    )
+    snapshot.signatures[1].reason = "Approved for the replacement equipment."
+    snapshot.signatures[0].signature_id = "private-signature-id"
+    snapshot.signatures[0].statement = "Actual signed declaration. " * 20
+    pages, _ = pdf_pages(snapshot, pdf_fonts, template_version=template)
+    text = " ".join(" ".join(page.extract_text().split()) for page in pages)
+    assert "supplier-quote.pdf" in text and "Approved for the replacement equipment." in text
+    assert text.count("Actual signed declaration.") >= 20
+    for value in [
+        "private-attachment-id",
+        "private-signature-id",
+        "sample-export",
+        "SHA-256",
+        "Template:",
+        "Export verification",
+    ]:
+        assert value not in text
+    for letter in "abcd":
+        assert letter * 64 not in text

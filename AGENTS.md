@@ -150,3 +150,5 @@ The implementation assumes one administrator-configured debit account per compan
 ## Requisition PDF reference (owner request, 2026-10-11)
 
 Use `../docs/pdf-template.jpeg` as the requisition PDF layout reference: compact header and total, status strip, aligned fields, dark cost-table headings, and side-by-side declaration/decision signatures. Keep full evidence and verification metadata in an appendix, retain truthful non-approved states and authorised Board projections, and preserve the bundled free fonts. New jobs use `requisition-v2`; existing immutable `requisition-v1` jobs must continue with their recorded template.
+
+The owner subsequently removed internal audit metadata from user PDFs: do not print hashes, signature/export UUIDs or a verification appendix. Retain audit and integrity data in the system. Additional pages should contain only necessary business details (supporting filenames, long declarations, decision reasons and authorised Board records).

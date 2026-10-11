@@ -193,7 +193,7 @@ def render_transfer(
         canvas.setStrokeColor(colors.HexColor("#D9D9D9"))
         canvas.line(MARGIN, 52, A4[0] - MARGIN, 52)
         note = p(
-            f"{snapshot.reference} / revision {snapshot.revision} | Transfer request {export_id}\n"
+            f"{snapshot.reference} / revision {snapshot.revision}\n"
             f"Page {document.page} | This instruction does not confirm that payment has been made.",
             footer_style,
         )

@@ -63,7 +63,12 @@ async def test_persistent_draft_capture_idempotency_private_download(
     pdf_text = "".join(
         page.extract_text() for page in PdfReader(io.BytesIO(response.content)).pages
     )
-    assert "Template: " + template in pdf_text
+    assert "SHA-256" not in pdf_text and "Signature reference" not in pdf_text
+    assert (
+        "Requisition and approval record" in pdf_text
+        if template == "requisition-v1"
+        else "Draft Requisition" in pdf_text
+    )
     assert response.headers["cache-control"] == "no-store"
     assert hashlib.sha256(response.content).hexdigest() == ready["file_digest"]
     async with sessions() as s:

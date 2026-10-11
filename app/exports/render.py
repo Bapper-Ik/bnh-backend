@@ -229,10 +229,6 @@ def render(
             field("Signed declaration / intent", record.statement)
         if record.reason:
             field("Reason", record.reason)
-        if record.signature_id:
-            field("Signature reference", record.signature_id)
-        if record.digest:
-            field("Signed content SHA-256", record.digest)
 
     title = {
         "APPROVED": "Approved Requisition",
@@ -496,7 +492,7 @@ def render(
             return result
         statement = record.statement or record.label
         if len(statement) > 360:
-            statement = "The full signed declaration is included in the verification record."
+            statement = "The full signed declaration follows under Additional details."
         result.append(paragraph(statement))
         drawing = Drawing(WIDTH * 0.46, 38)
         if record.strokes:
@@ -543,62 +539,34 @@ def render(
     story.append(Spacer(1, 5))
     story.append(KeepTogether([panels]))
     story.append(Spacer(1, 10))
-    p(
-        "Approved means authorised, not paid. Supporting evidence and verification details follow.",
-        "small",
+    p("Approved means authorised, not paid.", "small")
+    extra_signatures = [
+        record for record in snapshot.signatures if len(record.statement) > 360 or record.reason
+    ]
+    has_details = bool(
+        snapshot.evidence
+        or extra_signatures
+        or snapshot.board
+        or snapshot.current_state != snapshot.state
     )
-    story.append(PageBreak())
-    p("Record details and verification", "h1")
-    value: object
-    for label, value in (
-        ("Reference", snapshot.reference),
-        ("Revision", snapshot.revision or f"Draft (saved version {snapshot.request_version})"),
-        ("Record captured", time_label(snapshot.as_of)),
-        ("PDF generated", time_label(generated_at)),
-        ("Captured status", STATES.get(snapshot.state, snapshot.state)),
-    ):
-        field(label, value)
+    if has_details:
+        story.append(PageBreak())
+        p("Additional details", "h1")
     if snapshot.current_state != snapshot.state:
-        field(
-            "Current request status when captured",
-            STATES.get(snapshot.current_state, snapshot.current_state),
-        )
-    if snapshot.authority:
-        field("Assigned authority", authority)
-        field("Route", snapshot.route)
-        field("Policy version", snapshot.policy)
-    p("Supporting-document references", "h2")
-    p(
-        "References identify the recorded evidence. Files remain private in the application; malware scanning was not performed."
-    )
-    if not snapshot.evidence:
-        p("No supporting documents recorded.")
-    for item in snapshot.evidence:
-        field("Document", item.filename)
-        field("Reference", item.id)
-        field("SHA-256", item.digest)
-    if not snapshot.signatures:
-        p("Declaration and approval record", "h2")
-        p("Draft only. No requester declaration or approval has been signed for this saved draft.")
-    for signed_item in snapshot.signatures:
+        field("Current request status", STATES.get(snapshot.current_state, snapshot.current_state))
+    if snapshot.evidence:
+        p("Supporting documents", "h2")
+        for item in snapshot.evidence:
+            p(item.filename)
+    for signed_item in extra_signatures:
         signature(signed_item)
-    if snapshot.authority == "board":
+    if snapshot.board:
         p("Board resolution record", "h2")
-        if not snapshot.include_board:
-            p(
-                "Private Board records, evidence references and signature images are omitted from this export. Confirmed outcomes above retain their recorded meaning."
-            )
-        elif not snapshot.board:
-            p(
-                "No submitted Board resolution recorded. Recording alone does not approve a requisition."
-            )
         for record in snapshot.board:
             p(f"Resolution {record.number}: {record.reference}", "h2")
             for label, value in [
                 ("Board", record.board_name),
-                ("Record reference", record.record_id),
                 ("Record kind", record.kind),
-                ("Predecessor", record.predecessor_id),
                 ("Actual meeting date", record.meeting_date),
                 ("Record created", time_label(record.recorded_at)),
                 ("Recorded meeting outcome", record.outcome.replace("_", " ")),
@@ -612,19 +580,10 @@ def render(
                 field(label, value)
             if record.evidence:
                 field("Formal evidence", record.evidence.filename)
-                field("Evidence reference", record.evidence.id)
-                field("Evidence SHA-256", record.evidence.digest)
             for board_signature in record.signatures:
                 signature(board_signature)
             if len(record.signatures) == 1:
                 p("Awaiting Chairman review. Secretary recording is not final authorisation.")
-    p("Export verification", "h2")
-    field("Export reference", export_id)
-    field("Captured record SHA-256", snapshot_digest)
-    p(
-        "Template: requisition-v2. The private application records this PDF file digest and rendering versions. A drawn signature image is evidence captured by the application, not a cryptographic PDF signature."
-    )
-    story.append(Spacer(1, 6))
     output = io.BytesIO()
 
     class NumberedCanvas(Canvas):  # type: ignore[misc]

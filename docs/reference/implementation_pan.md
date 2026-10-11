@@ -1844,6 +1844,8 @@ Produce a downloadable PDF or the repository-supported equivalent PDF-rendering 
 
 **Template refinement (2026-10-11):** The owner supplied `pdf-template.jpeg`. New `requisition-v2` exports follow its compact summary, status strip, aligned fields, dark cost table and adjacent signatures; full evidence and verification records remain in an appendix. Long prose flows between pages without a blank half-page, and signature baselines align. Previously queued v1 jobs keep their recorded layout. Verification: 343 full-suite backend tests plus 46 final export/transfer regressions, all configured static/build checks, six frontend unit tests, two connected export/transfer browser journeys, and backend Docker/offline rendering passed. Synthetic short, draft, long-prose and Board PDFs were rendered and visually checked.
 
+**Printed-content correction:** The owner requires internal identifiers and hashes to remain in the system. Requisition PDFs omit signature IDs, signed-content and evidence hashes, export IDs, and the technical verification appendix. Routine short requisitions use one page; extra pages retain only necessary business details. Transfer-letter footers also omit export UUIDs. Audit storage and PDF integrity checks remain intact. Verified: 346 backend tests, six frontend unit tests, two connected export/transfer browser tests, configured static/build checks and backend Docker build pass; approved/draft, long and Board samples were visually inspected.
+
 ### Requirement Basis
 
 [F] original form content; [B] greyscale typography/page standard; [D] automated version-specific export.
@@ -1870,7 +1872,7 @@ Request UUID/revision; template version; authorised projection; immutable financ
 
 ### Business Rules and Validations
 
-- Use A4 and 0.60-inch margins. Body: Liberation Serif Regular 11 pt, left-aligned label/value fields, #595959. Follow `pdf-template.jpeg` for the requisition layout; complete verification records go in an appendix. H1: Liberation Sans Bold 16 pt, #000000. H2: Liberation Sans Bold 12 pt, #1A1A1A. Footer: Liberation Serif Regular 8 pt, #8C8C8C. This replaces the original proprietary-font requirement by the owner’s 2026-10-11 decision.
+- Use A4 and 0.60-inch margins. Body: Liberation Serif Regular 11 pt, left-aligned label/value fields, #595959. Follow `pdf-template.jpeg` for the requisition layout; only necessary business details go on additional pages; internal verification metadata is not printed. H1: Liberation Sans Bold 16 pt, #000000. H2: Liberation Sans Bold 12 pt, #1A1A1A. Footer: Liberation Serif Regular 8 pt, #8C8C8C. This replaces the original proprietary-font requirement by the owner’s 2026-10-11 decision.
 - Bundle the approved Liberation font binaries and licence notice. Verify loading/embedding in the production image and use the same fonts for tests. Missing/corrupt bundled assets fail explicitly.
 - Replace the old approval path with actual generated history. No empty Finance or Accounts signature boxes.
 - Display Draft/Rejected/Deferred/Conditional/Approved truthfully; Approved never becomes Paid.

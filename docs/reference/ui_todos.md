@@ -287,3 +287,7 @@ Final local release verification: 334 backend tests, six frontend unit tests and
 ## DOC-001 — Reference-template PDF refinement (2026-10-11)
 
 Backend-only template refinement follows `pdf-template.jpeg`. Existing Generate PDF / preview / download controls consume the same API. Newly queued exports report `requisition-v2`; existing immutable exports and v1 pending jobs keep their original template. No frontend change, migration or environment setting is required. Generate a new PDF after backend deployment to see the compact summary, numbered sections, cost table and adjacent signatures. Verification metadata remains in an appendix. Full backend checks and two connected export/transfer browser journeys passed; see `task_done.md` for the exact results.
+
+## DOC-001 / DOC-002 — Printed-content cleanup
+
+No frontend contract change. New PDFs omit internal signature IDs, hashes, export IDs and verification pages; routine short requisitions use one page. Business details and actual signatures remain. Existing files are retained; generate a new PDF to see the correction. Backend gate passed with 346 tests and both connected document browser journeys.

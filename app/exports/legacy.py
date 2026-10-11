@@ -23,7 +23,6 @@ from reportlab.platypus import (  # type: ignore[import-untyped]
     LongTable,
     PageTemplate,
     Paragraph,
-    Spacer,
     TableStyle,
 )
 
@@ -123,10 +122,6 @@ def render_legacy(
             field("Signed declaration / intent", record.statement)
         if record.reason:
             field("Reason", record.reason)
-        if record.signature_id:
-            field("Signature reference", record.signature_id)
-        if record.digest:
-            field("Signed content SHA-256", record.digest)
 
     p("Brendan Nicholas Holdings", "h2")
     p("Requisition and approval record", "h1")
@@ -260,8 +255,6 @@ def render_legacy(
         p("No supporting documents recorded.")
     for item in snapshot.evidence:
         field("Document", item.filename)
-        field("Reference", item.id)
-        field("SHA-256", item.digest)
     if not snapshot.signatures:
         p("Declaration and approval record", "h2")
         p("Draft only. No requester declaration or approval has been signed for this saved draft.")
@@ -281,9 +274,7 @@ def render_legacy(
             p(f"Resolution {record.number}: {record.reference}", "h2")
             for label, value in [
                 ("Board", record.board_name),
-                ("Record reference", record.record_id),
                 ("Record kind", record.kind),
-                ("Predecessor", record.predecessor_id),
                 ("Actual meeting date", record.meeting_date),
                 ("Record created", time_label(record.recorded_at)),
                 ("Recorded meeting outcome", record.outcome.replace("_", " ")),
@@ -297,19 +288,10 @@ def render_legacy(
                 field(label, value)
             if record.evidence:
                 field("Formal evidence", record.evidence.filename)
-                field("Evidence reference", record.evidence.id)
-                field("Evidence SHA-256", record.evidence.digest)
             for board_signature in record.signatures:
                 signature(board_signature)
             if len(record.signatures) == 1:
                 p("Awaiting Chairman review. Secretary recording is not final authorisation.")
-    p("Export verification", "h2")
-    field("Export reference", export_id)
-    field("Captured record SHA-256", snapshot_digest)
-    p(
-        "Template: requisition-v1. The private application records this PDF file digest and rendering versions. A drawn signature image is evidence captured by the application, not a cryptographic PDF signature."
-    )
-    story.append(Spacer(1, 6))
     output = io.BytesIO()
 
     class NumberedCanvas(Canvas):  # type: ignore[misc]
