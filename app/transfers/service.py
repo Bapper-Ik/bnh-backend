@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import AuditDetails, record_event
@@ -13,6 +14,7 @@ from app.requisitions.schemas import Content
 from app.requisitions.service import content_digest
 from app.transfers.models import CompanyDebitAccount
 from app.transfers.schemas import DebitAccount, TransferDetails
+from app.vendors.models import BeneficiaryVersion, Vendor, VendorVersion
 
 TRANSFER_CONSENT = (
     "I authorise the system to place this approval signature, my name and the approval date "
@@ -25,6 +27,32 @@ async def details(s: AsyncSession, req: Requisition) -> TransferDetails:
     assert revision
     account = await s.get(CompanyDebitAccount, req.entity_id, populate_existing=True)
     vendor = Content.model_validate(revision.content).vendor
+    # The requester may only see a redacted vendor snapshot. Resolve the exact
+    # version they selected, never today's vendor account. These values are shown
+    # to the approver and bound into their fresh transfer-signing challenge.
+    context = revision.context.get("context", {})
+    if (
+        isinstance(context, dict)
+        and context.get("bank_details_state") == "restricted"
+        and context.get("vendor_version_id")
+        and context.get("vendor_id")
+        and not any((vendor.bank_name, vendor.account_name, vendor.account_number))
+    ):
+        bank = await s.scalar(
+            select(BeneficiaryVersion)
+            .join(VendorVersion, VendorVersion.beneficiary_id == BeneficiaryVersion.id)
+            .join(Vendor, Vendor.id == VendorVersion.vendor_id)
+            .where(
+                VendorVersion.id == UUID(str(context["vendor_version_id"])),
+                Vendor.id == UUID(str(context["vendor_id"])),
+                Vendor.entity_id == req.entity_id,
+                BeneficiaryVersion.vendor_id == Vendor.id,
+            )
+        )
+        if bank:
+            vendor.bank_name = bank.bank_name
+            vendor.account_name = bank.account_name
+            vendor.account_number = bank.account_number
     missing = []
     if not account:
         missing.append("Company debit account and bank branch address")

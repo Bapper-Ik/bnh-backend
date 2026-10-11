@@ -1934,6 +1934,16 @@ Owner request (2026-10-11), `transfer-request.jpeg`, and explicit instruction to
 - Missing bank data is disclosed before approval and stored as an unavailable letter with an explicit reason. It is never repaired using later unsigned data. Font/storage failure does not undo approval; retries preserve the original capture.
 - The requester views/downloads the private letter in the existing document viewer and prints the PDF through a PDF reader. Oversight permissions alone do not grant bank-letter download access.
 
+### Shared vendor and requester download correction (2026-10-11)
+
+Vendor-directory redaction no longer prevents a complete transfer instruction. For a restricted selected vendor, the server resolves the beneficiary from the exact immutable vendor version captured by the submitted revision, scoped to the same company and vendor. It never uses the latest master account. The individual approver or confirming Chairman reviews and signs these exact beneficiary details in the existing transfer ceremony. Requester-facing requisition/vendor views stay redacted, while the requester can download the resulting approved bank letter through the existing private export endpoint.
+
+The Documents section now provides a direct **Download transfer letter** action alongside the viewer. Downloads fetch the actual authorised PDF, report storage/session failures, and preserve the filename. The vendor-selection notice explains that the hidden account is retained for approval and the signed payment letter.
+
+Existing saved drafts and pending approvals with their selected vendor version benefit without a migration. Already approved failed letters and signed request content are not rewritten; a historic signature is never applied to newly added bank details. Missing details in the originally selected version remain missing even if the vendor is subsequently updated. Manual replacement and explicit reselection use their newly submitted details. No new environment variable or storage provider is required; company debit-account settings and private Cloudinary storage must already be configured.
+
+Verification: 367 PostgreSQL backend tests, all 47 connected browser journeys, six frontend unit tests, Ruff check/format, mypy, frontend lint/format/typecheck, production build and both Docker builds passed. Coverage includes HOD/Chief of Staff/MD/Chairman letters, redacted request/replay responses, unchanged signed revisions, master-account changes, explicit reselection/manual replacement, originally missing accounts, actual PDF contents, owner-only downloads, and desktop/mobile controls.
+
 ### API and Migration
 
 Migration `0017` follows `0016`. `GET/PUT /api/v1/organisation/entities/{id}/debit-account` uses expected versions and organisation management permission. Signing challenges add optional `transfer_details`; export metadata adds `document_type=bank_transfer`. Existing scoped exports/content/retry endpoints serve the letter. Audit events: `organisation.debit_account.updated`, `requisition.transfer.queued`, and the existing export success/failure events. No new provider or database URL is required.

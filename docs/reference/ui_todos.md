@@ -295,3 +295,10 @@ No frontend contract change. New PDFs omit internal signature IDs, hashes, expor
 ## VEN-001 — Vendor bank visibility correction
 
 Vendor lists now show `Recorded` when full detail access is permitted, retaining the restricted label only for restricted readers. Ordinary staff can see vendors they created; eligible HOD/Chief of Staff/MD/Secretary/Chairman appointments and full administrators receive full details within existing company/oversight scope. Current and historical details and requisition vendor selection follow server authorization. Existing bank-read grants and read-only reviewer restrictions remain. All 46 browser journeys pass, including the new role/ordinary-peer journey and updated administrator checks; no API schema or environment changes.
+
+
+## DOC-002 / VEN-001 — Shared vendor letters and direct requester download
+
+Selecting a vendor created by another staff member keeps the ordinary requester's bank view restricted, while approval signing resolves that exact captured vendor version's beneficiary. `transfer_details` on the existing individual/Chairman challenge shows those complete values and binds them to the approval signature. No API schema change. The form explains the hidden bank account's use; Documents offers **Download transfer letter** as soon as the automatic export is ready, using authenticated `GET /api/v1/exports/{id}/content` and displaying failures instead of downloading error responses. The existing viewer/download remains available.
+
+Deploy backend and frontend from `dev`; no migration or new settings. Saved drafts/pending approvals retain their original vendor version. Already failed letters from incomplete historic approvals are not silently regenerated with unsigned details. Company debit-account configuration and functioning private storage remain required. Verification results are recorded in `task_done.md`.
