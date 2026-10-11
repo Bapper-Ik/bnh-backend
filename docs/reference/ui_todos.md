@@ -8,6 +8,8 @@
 - Monitoring should retry unavailable readiness. Liveness/readiness do not establish authentication, business feature completion, or human acceptance.
 - No staff-facing UI is required by this foundation feature. OpenAPI is exposed through FastAPI's `/openapi.json` and `/docs`.
 
+Developer onboarding (2026-10-11): both repositories now include `docs/development.md`, linked from their README and deployment guide. Start the complete `app.main:create_app` assembly and export the frontend's `BACKEND_URL` explicitly; the guide covers exact local origins, first operator creation, provider requirements and isolated browser-test prerequisites. No endpoint or generated contract changed.
+
 ## AUD-001 — internal event infrastructure
 
 No public endpoint is added. Business services call `record_event` inside their transaction, using a registered action and trusted actor/resource/scope identifiers. `event_key` supplies database uniqueness for a business operation; callers separately provide API payload binding/replay behaviour. `AuditDetails` rejects unknown fields and arbitrary digest/changed-field content. Mandatory event or archive-intent failure must roll back the action and return a safe persistence error; never show successful approval after that failure.
@@ -375,3 +377,10 @@ New draft references use BNH-{CODE}-{serial}, where CODE is the requester’s se
 POST /organisation/departments now requires code. Both department PATCH endpoints accept code; code changes require expected_version. Company code rules remain unchanged. The workspace screen validates three letters, shows older departments needing setup, and preserves entries after conflicts. Regenerated OpenAPI/types describe DepartmentEdit and DepartmentUpdate. Deploy backend and frontend together, then configure existing department codes before new request creation.
 
 The new-request form treats DEPARTMENT_CODE_REQUIRED as a retryable setup condition, preserving entries and leaving Save Draft available. Verification: full 54-browser suite plus the final 14-case organisation/requisition run (55 distinct journeys), six unit tests, static/type/format checks, production build and both Docker builds passed; backend verification is recorded in task_done.md.
+
+
+## WEB-002 — Centred footers and simpler sidebar (2026-10-11)
+
+The shared Copyright component centres its text across the full footer width on every workspace, access/recovery and error screen, including wrapped mobile text. Removed the standalone company name and “Requisitions & delegated authority” description from both desktop and mobile navigation, along with their unused styles.
+
+Verification: frontend lint/format/type checks, six unit tests, production build and all eight dashboard/mobile-shell/responsive-content browser journeys passed against the isolated local backend. Desktop workspace and mobile recovery screenshots were visually inspected; responsive checks covered 320px through 1440px. No backend, API or configuration changes.

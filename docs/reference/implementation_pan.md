@@ -335,6 +335,8 @@ Make the existing backend persist its records in PostgreSQL and establish migrat
 
 **Single-URL update (2026-10-07):** Owner-approved DATABASE_URL now serves migration and application use per environment. Development and production use separate databases. The previous elevated-role rejection is superseded. Full backend 174 tests and isolated staged 105 tests passed with Ruff, formatting and mypy; deployment environment configuration remains operator-supplied.
 
+**Developer onboarding update (2026-10-11):** Added `docs/development.md` to both repositories and the shared workspace, with sibling `dev` clones, locked dependencies, isolated local PostgreSQL, schema provisioning/migration, one-time operator bootstrap, application startup, Resend/Cloudinary settings, checks, API generation, code map, delivery gate and troubleshooting. Replaced stale README startup notes and corrected deployment summaries. Fresh local clones installed successfully; a new operator signed in through both Vite and the built Node frontend against a fresh database at migration 0020. API generation reproduced the committed contracts. Verification details are recorded in `task_done.md`. No runtime, schema or API changes.
+
 ### Requirement Basis
 
 [B] Persistent storage and one shared system; [R] existing scaffold; [D] runtime/deployment implementation details.
@@ -2110,6 +2112,8 @@ Deliver the complete self-service browser journey for staff to prepare, sign, su
 **Interface wording follow-up:** All fourteen screen templates and shared dialogs use Title Case for headings, labels and actions, with sentence-case explanations. Requisition vendor details now label the supplier as Vendor Name; authority codes and Board outcomes have readable display labels. Verification and publication are recorded in task_done.md.
 
 **Login redesign follow-up (2026-10-11):** Removed the standalone company name, workspace eyebrow and invitation notice from Sign In. The login-only layout now centres the existing brand and form inside a responsive card, centres Forgot Password? below Sign In, enlarges and aligns the logo/brand name with a vertical divider, and enlarges inputs/actions and centres the copyright footer. Login uses Staff Email and the exact subtitle “by Brendan Nicholas Holdings”, with wrapping on narrow screens. The password visibility control, accessible labels, sign-in errors and session/recovery behavior remain intact. Twelve connected browser checks, six unit tests, frontend lint/format/type checks, production build and frontend Docker build passed. Visual inspection confirmed the desktop/mobile layout. Delivery evidence is recorded in task_done.md.
+
+**Shared footer/sidebar follow-up (2026-10-11):** Centred the copyright text through the shared Copyright component for all workspace, public access and error screens, including wrapped mobile text. Removed the company description from both the desktop sidebar and mobile navigation drawer. Verification is recorded in task_done.md.
 
 ### Requirement Basis
 

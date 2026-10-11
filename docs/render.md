@@ -14,7 +14,7 @@ Set these environment variables in Render:
 
 Health check: `/api/v1/health/ready`.
 
-The current release requires schema **0015**; startup applies all pending migrations before serving requests. This adds persistent notifications and retry scheduling, alongside the earlier requisition, Board and history migrations. Deploy the backend before the matching frontend. No new environment variables are required. The last separately verified deployed vendor schema was **0009**. The supplied development database was upgraded from 0005 to 0009 to resolve the deployed session-query failure. Startup now runs `alembic upgrade head` before Uvicorn, using `DATABASE_URL`. Existing public tables remain untouched. The application now accepts the same schema-owner connection as migrations, as explicitly approved.
+The current migration head is **0020**. Startup applies all pending migrations with `alembic upgrade head` before serving requests, using the same `DATABASE_URL` as the application. Deploy the backend before the matching frontend. The configured connection must own the application schema and tables; existing public tables are left untouched.
 
 As requested, `/app/scripts/start.sh` requires only `DATABASE_URL` and runs `alembic upgrade head` on each start. If migration fails, the process exits without starting Uvicorn. Uvicorn uses that same connection. Remove the obsolete `MIGRATION_DATABASE_URL` setting; it is not read. If `DATABASE_URL` currently names the restricted `custodian_app` login, replace it with this environment's schema-owner connection before redeploying. Set `DATABASE_SSL=true` for Render. Do not put credentials in Docker build arguments or Git. Use one service instance while startup migrations run; multiple simultaneous migrations are not coordinated by this shell script.
 
@@ -54,7 +54,7 @@ docker run --rm -p 8000:10000 --env-file .env custodian-backend
 
 The Docker context excludes all environment files, local database files, tests and Git metadata. The final image runs as a non-root user and installs locked runtime dependencies only.
 
-This release includes screens 1–3, the requisition/approval/Board journeys (5–9), Vendors (10), Staff & Access (11), Organisation & Authority (12), Audit Log (13), and a shared notification drawer. Dashboard and remaining account-security/PDF work retain their tracker status. Email requires the configuration below. Health checks do not establish complete workflows or staff acceptance.
+The application supports the fourteen-screen release: account access, dashboard, requisitions, individual/Board approval, vendors, staff, organisation, audit and account security, with shared notifications and private document exports. Email and Cloudinary require their configuration below. See [local development and onboarding](development.md) for first-time setup; health checks do not establish complete workflows or staff acceptance.
 
 Reference: [Render Docker deployments](https://render.com/docs/docker), [uv Docker integration](https://docs.astral.sh/uv/guides/integration/docker/).
 
