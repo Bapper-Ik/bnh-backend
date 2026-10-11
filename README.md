@@ -151,3 +151,9 @@ PDF layout regression tests use Poppler `pdftotext` (`poppler-utils` on Debian/U
 
 
 Signed bank transfer letters (DOC-002) reuse the same approval signature after explicit consent and an immutable bank-data capture. Configure one debit account per company in Organisation & Authority before approval. The requester downloads the automatically generated letter from Documents. Requires migrations 0016–0017, the existing private Cloudinary service and the included free PDF fonts; see [deployment instructions](docs/render.md). Live provider verification remains a post-deployment check.
+
+### Requisition PDF layout
+
+New requisition exports use `requisition-v2`, matching the owner's `docs/pdf-template.jpeg`: a compact summary and total in figures/words, a status/decision/authority strip, aligned requester/vendor/scope fields, a numbered cost table with a dark header, and adjacent declaration/decision signatures. Longer content flows across A4 pages with repeated table and page headers. Detailed evidence, full declarations, historical Board records and hashes are retained in a separate verification appendix.
+
+After deploying, generate a new PDF from the requisition to see this layout. Existing ready PDFs remain unchanged; jobs queued under `requisition-v1` retain the original renderer and recorded template version. No migration, font setup or frontend deployment is required for this layout change. Bank transfer letters retain their separate letter template.

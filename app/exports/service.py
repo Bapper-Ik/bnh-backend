@@ -12,13 +12,12 @@ from app.audit.service import AuditDetails, record_event
 from app.core.errors import DomainError
 from app.exports.models import Export
 from app.exports.projection import capture
+from app.exports.render import TEMPLATE_VERSION
 from app.exports.schemas import ExportCommand, ExportView
 from app.identity.service import Actor
 from app.requisitions.models import Requisition
 from app.requisitions.router import key_lock
 from app.requisitions.service import content_digest
-
-TEMPLATE_VERSION = "requisition-v1"
 
 
 def allowed(actor: Principal) -> ColumnElement[bool]:

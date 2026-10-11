@@ -3,6 +3,7 @@ import hashlib
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from functools import partial
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -85,6 +86,7 @@ async def process_claim(
         may_render = await permitted(s, row)
         snapshot = row.snapshot
         snapshot_digest = row.snapshot_digest
+        template_version = row.template_version
         attempts = row.attempts
     failure = None
     result = None
@@ -98,7 +100,9 @@ async def process_claim(
             if content_digest(snapshot) != snapshot_digest:
                 raise RenderFailure("snapshot_integrity_failed")
             data, renderer_version, font_version = await run_in_threadpool(
-                renderer,
+                partial(renderer, template_version=template_version)
+                if renderer is render
+                else renderer,
                 Snapshot.model_validate(snapshot),
                 str(claim[0]),
                 snapshot_digest,

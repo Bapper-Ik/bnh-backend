@@ -28,9 +28,11 @@ async def generate(exports, sessions, item):
     await process_claim(sessions, app.state.settings, storage, claim)
 
 
+@pytest.mark.parametrize("template", ["requisition-v1", "requisition-v2"])
 async def test_persistent_draft_capture_idempotency_private_download(
-    exports, organisation, sessions
+    exports, organisation, sessions, monkeypatch, template
 ):
+    monkeypatch.setattr("app.exports.service.TEMPLATE_VERSION", template)
     client, _, _ = exports
     await sign_in(client, organisation["people"]["staff"])
     req = await draft(client, organisation, "248000")
@@ -51,8 +53,17 @@ async def test_persistent_draft_capture_idempotency_private_download(
     await generate(exports, sessions, item)
     ready = (await client.get("/api/v1/exports/" + item["id"])).json()
     assert ready["status"] == "ready", ready
+    assert ready["template_version"] == template
     response = await client.get("/api/v1/exports/" + item["id"] + "/content")
     assert response.status_code == 200 and response.content.startswith(b"%PDF-")
+    import io
+
+    from pypdf import PdfReader
+
+    pdf_text = "".join(
+        page.extract_text() for page in PdfReader(io.BytesIO(response.content)).pages
+    )
+    assert "Template: " + template in pdf_text
     assert response.headers["cache-control"] == "no-store"
     assert hashlib.sha256(response.content).hexdigest() == ready["file_digest"]
     async with sessions() as s:
