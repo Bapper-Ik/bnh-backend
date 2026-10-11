@@ -53,6 +53,8 @@ register_events(
     "vendor.updated",
     "vendor.beneficiary_created",
     "vendor.update_failed",
+    "evidence.staged",
+    "evidence.staged_removed",
     "evidence.uploaded",
     "evidence.detached",
     "signature.challenged",

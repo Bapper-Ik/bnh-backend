@@ -168,3 +168,8 @@ New account capture must use exactly 10 ASCII digits and preserve leading zeroes
 ## Requester draft deletion and retraction
 
 Requesters may delete only their own drafts. Retain audit and signed evidence internally; deleted requests and their documents must disappear from ordinary reads, lists and downloads. Requesters may retract pending requests to Draft only before any approver decision or Board resolution work on that revision. Retraction preserves the submitted revision; resubmission creates a fresh signed revision and recomputes authority. Use expected versions, row locking, actor-bound idempotency and atomic audit for both actions.
+
+
+## Automatic supporting uploads
+
+File selection starts upload immediately. New-form uploads must not require creating a draft first. Temporarily buffer validated files privately by requester, company and creation key; expire them after 24 hours, enforce the configured per-file and per-person pending count limits, and clean expired bytes hourly/startup. Saving claims the exact supplied upload IDs into permanent Cloudinary attachments atomically with the draft and audit. Reject expired, missing, foreign or changed file sets rather than silently dropping documents. Use deterministic private object keys for safe retries. No document scanner is part of this release.

@@ -80,6 +80,7 @@ class Content(Command):
 
 
 class CreateRequest(Command):
+    staged_upload_ids: list[UUID] = Field(default_factory=list, max_length=100)
     entity_id: UUID
     creation_key: UUID
     content: Content

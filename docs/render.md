@@ -154,3 +154,14 @@ On approval, the signing dialog displays the frozen beneficiary data, current co
 If required banking data is missing, the signing dialog warns before approval and the resulting document entry explains why generation is unavailable. Do not alter a signed capture to repair bank details: complete the source profile before approval or return a request for beneficiary correction. Already approved records are not silently reopened or retroactively signed. Font/storage failures preserve the approval and frozen capture; once configuration is restored, use **Retry PDF**. No live banking data, signature or staff action is created by deployment.
 
 The bundled-font layout is tested locally. After deployment, verify a live private Cloudinary upload/download for a newly approved request; isolated storage tests do not establish that live result. Retain both export metadata and corresponding private objects in backups.
+
+
+## EVD-001 automatic uploads before saving a draft
+
+Deploy the backend before the frontend. The tracked Docker startup applies migrations 0018 (draft deletion) and 0019 (temporary supporting uploads) automatically using the environment's existing DATABASE_URL. No new secrets or services are required.
+
+New-form uploads are validated and temporarily buffered in PostgreSQL, privately scoped to the active requester/company/form. The existing attachment size limit applies; the attachment count limit also caps all pending files per requester. These bytes expire after 24 hours, are inaccessible after expiry, and are removed by an hourly worker (also run at application startup). On an idle Render instance, cleanup resumes on wake. Saving a draft transfers its exact staged files to authenticated raw Cloudinary assets and removes the temporary bytes in the same database transaction as the draft/attachment/audit metadata. No draft is created solely by selecting a file.
+
+A storage or audit failure preserves the temporary upload and form for retry. Object keys include requester, creation key, file ID and digest, using the adapter's existing overwrite=false behavior to avoid duplicates on retry; see [Cloudinary's duplicate-upload guidance](https://cloudinary.com/documentation/upload_images#avoiding_duplicate_uploads). Already saved documents retain the existing evidence retention rules. An external upload that succeeds before a database rollback can leave an unreferenced private object if the user abandons the retry; automatic deletion of permanent evidence is not introduced.
+
+Verify on the deployed environment: select a PNG/PDF on a new form before Save draft, preview it, save, refresh, and preview/download it again. Also select a file on an existing draft; it must upload without an Upload document button. Local isolated-storage tests do not verify live Cloudinary credentials or account behavior.

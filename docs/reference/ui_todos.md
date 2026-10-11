@@ -327,3 +327,10 @@ New requisition/vendor/company-bank writes require exactly ten ASCII digits for 
 ## REQ-002 — Delete drafts and retract pending requests (2026-10-11)
 
 Requester details expose Delete draft only in Draft, and Retract requisition only before an approver decision or Board resolution work. Confirmed retraction returns to Draft for editing and fresh signed resubmission. Both POST endpoints (`/requisitions/{id}/delete` and `/requisitions/{id}/retract`) accept expected_version and idempotency_key. Reload after conflicts; identical retries reuse the key. Deleted drafts disappear from normal lists, details and document access; internal history remains. Deploy migration 0018 via the existing Docker startup before the frontend. No new settings.
+
+
+## EVD-001 — Automatic upload before Save draft (2026-10-11)
+
+The shared Supporting documents component uploads immediately after file selection, with progress, Retry upload and Cancel file after failures. On a new requisition, GET/POST `/staged-attachments` use entity_id, creation_key and (for POST) upload_key/filename; owner-only GET content and DELETE use `/staged-attachments/{id}`. Files can be previewed/removed before any draft exists. Creation passes the exact `staged_upload_ids`; the backend claims those files into permanent private attachments atomically. Existing saved-draft upload endpoints are unchanged.
+
+The form preserves entries during failures, prevents company changes while files are attached, and blocks Save while uploads are pending or unresolved. A documents-changed error refreshes the file list without discarding form values. Files on unsaved forms expire after 24 hours; save the draft to keep them. Deploy migration 0019 before this frontend. No extra Upload document click or scanner setup.

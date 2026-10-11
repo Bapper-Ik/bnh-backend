@@ -904,6 +904,8 @@ Support safe private evidence uploads and a deliberate, server-validated signing
 
 **Attachment layout refinement (2026-10-08):** Supporting-document rows use a truncated filename with a full-name tooltip, file icon/type/size, and compact View/Remove actions. Full filenames remain in accessible button labels and the private viewer. Actions align to the right on desktop and beneath the filename on narrow screens, retaining 44px touch targets. Requisition detail grid tracks are allowed to shrink so document rows and cost tables stay within the mobile page. API behavior, confirmation, permission checks and frozen-evidence controls are unchanged.
 
+**Owner extension (2026-10-11):** Supporting files upload automatically on selection, including before the first draft save. Migration 0019 provides bounded, owner/company/creation-key-scoped temporary bytes in PostgreSQL with 24-hour expiry and startup/hourly cleanup. Save claims the exact file set into private Cloudinary attachments within the draft/audit transaction; retries use deterministic object keys. Missing/expired/foreign uploads fail explicitly, and no scanner is introduced. Browser forms retain inputs during upload failures and offer retry/removal with mobile-aligned document rows. Verification is recorded in task_done.md.
+
 **Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
 
 ### Requirement Basis

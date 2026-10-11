@@ -157,13 +157,18 @@ async def list_requests(
 @router.post("", response_model=RequestView, status_code=201)
 async def create(
     body: CreateRequest,
+    request: Request,
     actor: Actor = Depends(current_actor),
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> RequestView:
     if actor.account.read_only:
         raise DomainError("ACCESS_DENIED", "Read-only reviewers cannot create requisitions.", 403)
     await key_lock(s, actor, body.creation_key)
-    digest = content_digest(body.model_dump(mode="json"))
+    digest = content_digest(
+        body.model_dump(
+            mode="json", exclude={"staged_upload_ids"} if not body.staged_upload_ids else set()
+        )
+    )
     existing = await s.scalar(
         select(Requisition).where(
             Requisition.requester_id == actor.id, Requisition.creation_key == body.creation_key
@@ -194,6 +199,9 @@ async def create(
     )
     s.add(req)
     await s.flush()
+    from app.evidence.staging import claim
+
+    await claim(s, req, request.app.state.evidence_storage, body.staged_upload_ids)
     await record_event(
         s,
         action="requisition.created",

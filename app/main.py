@@ -12,6 +12,8 @@ from app.core.config import Settings, get_settings
 from app.core.errors import DomainError
 from app.dashboard.router import router as dashboard_router
 from app.evidence.router import router as evidence_router
+from app.evidence.staging import cleanup_loop
+from app.evidence.staging import router as staging_router
 from app.evidence.storage import CloudinaryStorage
 from app.exports.render import available as export_fonts_available
 from app.exports.render import render as export_renderer
@@ -33,6 +35,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(requisitions_router)
     app.include_router(approvals_router)
     app.include_router(evidence_router)
+    app.include_router(staging_router)
     app.include_router(board_router)
     app.include_router(history_router)
     app.include_router(audit_router)
@@ -68,9 +71,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         application.state.export_renderer,
                     )
                 )
+            staging_worker = asyncio.create_task(cleanup_loop(application.state.sessions))
             try:
                 yield
             finally:
+                staging_worker.cancel()
+                with suppress(asyncio.CancelledError):
+                    await staging_worker
                 if export_worker:
                     export_worker.cancel()
                     with suppress(asyncio.CancelledError):
@@ -97,7 +104,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             else "signature.rejected"
             if path.endswith(("/actions", "/signing-challenges"))
             else "evidence.rejected"
-            if "/attachments" in path
+            if "/attachments" in path or "/staged-attachments" in path
             else None
         )
         if path.endswith("/history"):
