@@ -4,7 +4,8 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation, localcontext
 from enum import IntEnum
 from typing import Literal
 
-POLICY_VERSION = "bnh-doa-v1"
+POLICY_VERSION = "bnh-doa-v2"
+HOD_SELF_APPROVAL_POLICY = "bnh-doa-v2"
 MAX_TOTAL = Decimal("999999999999999.99")
 
 
@@ -87,12 +88,14 @@ def resolve(total: str, offices: set[str], currency: Literal["NGN"] = "NGN") -> 
         if "md" in offices
         else Authority.MD
         if "chief_of_staff" in offices
-        else Authority.CHIEF_OF_STAFF
-        if "hod" in offices
         else Authority.HOD
     )
     authority = max(band, floor)
     explanation = f"Amount requires {band.label.replace('_', ' ')}."
+    if authority == Authority.HOD and "hod" in offices:
+        explanation += (
+            " The requesting HOD may approve separately using the department sub-account."
+        )
     if floor > band:
         explanation += (
             f" Requester's office raises required authority to {floor.label.replace('_', ' ')}."

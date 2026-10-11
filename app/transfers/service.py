@@ -6,13 +6,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import AuditDetails, record_event
+from app.authority.self_approval import hod_self_approval
 from app.exports.models import Export
 from app.exports.projection import signing
 from app.exports.schemas import Snapshot
 from app.requisitions.models import Requisition, Revision
 from app.requisitions.schemas import Content
 from app.requisitions.service import content_digest
-from app.transfers.models import CompanyDebitAccount
+from app.transfers.models import CompanyDebitAccount, DepartmentDebitAccount
 from app.transfers.schemas import DebitAccount, TransferDetails
 from app.vendors.models import BeneficiaryVersion, Vendor, VendorVersion
 
@@ -25,7 +26,12 @@ TRANSFER_CONSENT = (
 async def details(s: AsyncSession, req: Requisition) -> TransferDetails:
     revision = await s.get(Revision, req.current_revision_id)
     assert revision
-    account = await s.get(CompanyDebitAccount, req.entity_id, populate_existing=True)
+    department_debit = hod_self_approval(req, revision)
+    account = (
+        await s.get(DepartmentDebitAccount, req.department_id, populate_existing=True)
+        if department_debit
+        else await s.get(CompanyDebitAccount, req.entity_id, populate_existing=True)
+    )
     vendor = Content.model_validate(revision.content).vendor
     # The requester may only see a redacted vendor snapshot. Resolve the exact
     # version they selected, never today's vendor account. These values are shown
@@ -55,7 +61,11 @@ async def details(s: AsyncSession, req: Requisition) -> TransferDetails:
             vendor.account_number = bank.account_number
     missing = []
     if not account:
-        missing.append("Company debit account and bank branch address")
+        missing.append(
+            "Department sub-account and bank branch address"
+            if department_debit
+            else "Company debit account and bank branch address"
+        )
     for label, value in [
         ("Beneficiary bank", vendor.bank_name),
         ("Beneficiary account name", vendor.account_name),
@@ -64,6 +74,9 @@ async def details(s: AsyncSession, req: Requisition) -> TransferDetails:
         if not value:
             missing.append(label)
     return TransferDetails(
+        debit_source="department" if department_debit else "company",
+        department_id=req.department_id if department_debit else None,
+        department_name=revision.department_name if department_debit else None,
         debit=DebitAccount.model_validate(account.data) if account else None,
         debit_version=account.version if account else 0,
         beneficiary_bank=vendor.bank_name,

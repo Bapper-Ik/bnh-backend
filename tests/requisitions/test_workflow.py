@@ -192,7 +192,7 @@ async def test_returned_request_recalculates_route_and_preserves_history(client,
 async def test_self_request_escalates_and_cannot_self_approve(client, organisation):
     person = organisation["people"]["hod"]
     await sign_in(client, person)
-    req, _ = await signed(client, await draft(client, organisation, "1.00"), person, "submit")
+    req, _ = await signed(client, await draft(client, organisation, "5000000.01"), person, "submit")
     assert req["required_authority"] == "chief_of_staff"
     r = await client.post(
         f"/api/v1/requisitions/{req['id']}/signing-challenges",

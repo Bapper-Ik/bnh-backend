@@ -73,15 +73,15 @@ Amounts are NGN; upper limits are inclusive:
 | Requester | ₦1–₦5,000,000 | >₦5,000,000–₦100,000,000 | >₦100,000,000–₦500,000,000 | >₦500,000,000 |
 | --- | --- | --- | --- | --- |
 | Ordinary staff | Own department's HOD | Chief of Staff | MD | Board |
-| HOD | Chief of Staff | Chief of Staff | MD | Board |
+| HOD | Self-approval using department sub-account | Chief of Staff | MD | Board |
 | Chief of Staff | MD | MD | MD | Board |
 | MD | Board | Board | Board | Board |
 
 - Route directly using the higher of the amount requirement and the requester's office-based minimum. There is no sequential HOD → Chief of Staff → MD chain.
 - Derive identity, department, entity membership, and appointments from trusted server records, not browser-selected roles or editable profile fields.
-- No self-approval, including another account belonging to the same person.
+- Current eligible HODs may explicitly approve their own requisitions from ₦1 through ₦5,000,000 using the department sub-account. This is the only self-approval exception; higher Chief of Staff/MD requester floors still apply. Another account or role cannot bypass identity-based restrictions.
 - Only the eligible assigned officeholder may act. Seniority does not grant substitute authority. Check current privileges when the decision commits.
-- Missing, inactive, ambiguous, or self-signing assignments block the affected action. Never invent substitutes or absent-officer escalation rules.
+- Missing, inactive, ambiguous, or unauthorised self-signing assignments block the affected action. Never invent substitutes or absent-officer escalation rules.
 - Preserve the policy version and route explanation per submission. No editable approval-threshold administration screen in v1.
 
 Board cases require an actual meeting resolution. The Company Secretary records the outcome, attaches evidence, signs, and submits it. A different individual serving as Board Chairman confirms and signs that exact record or returns it for correction. The Chairman must also differ from the requester. Confirmation preserves the meeting's actual outcome: approval, rejection, deferment, or conditional approval. Unresolved conditions remain a hold; later resolutions follow the same process. No online voting, invented quorum calculation, or unilateral Board approval.
@@ -143,9 +143,9 @@ Administrative oversight grants read access to request lists/details/status/hist
 
 ## Signed bank transfer letters (owner request, 2026-10-11)
 
-The owner explicitly authorises a bank transfer letter using the signature captured in the same approval ceremony. This extends the existing document viewer and Organisation & Authority settings, not payment execution. Bind the configured company debit account, beneficiary account and amount into the fresh approval challenge; show them and the transfer-signature consent before signing. Use the actual individual approver's signature or the Chairman's confirmation signature for an unconditional Board approval. Never use a profile signature, requester signature, Secretary signature or historic signature without that consent. Conditional/rejected/deferred requests produce no transfer letter.
+The owner explicitly authorises a bank transfer letter using the signature captured in the same approval ceremony. This extends the existing document viewer and Organisation & Authority settings, not payment execution. Bind the applicable company or department debit account, beneficiary account and amount into the fresh approval challenge; show them and the transfer-signature consent before signing. Use the actual individual approver's signature or the Chairman's confirmation signature for an unconditional Board approval. Never use a profile signature, submission signature, Secretary signature or historic signature without that consent. Conditional/rejected/deferred requests produce no transfer letter.
 
-The implementation assumes one administrator-configured debit account per company. Account numbers remain strings. Freeze the approved bank data and signature; later master-data edits do not rewrite letters. Missing bank details are visible before signing and prevent a complete letter, without reversing an otherwise valid approval. Do not add unsigned details to a frozen letter or retroactively create letters for older approvals. Font/storage failures remain explicit and retryable from the same capture. Requesters retrieve their own private letters; administrative oversight alone grants no download access. DOC-002 depends on the DOC-001 export foundation. The owner explicitly requested both pending document features be pushed with the free-font change after local checks pass. Live Cloudinary verification and staff acceptance remain separately reported deployment checks; they do not block this development push.
+Use one administrator-configured company debit account for ordinary approvals and one department sub-account for eligible HOD self-approvals. Never fall back to the company account when that department sub-account is missing. Account numbers remain strings. Freeze the approved bank data and signature; later master-data edits do not rewrite letters. Missing bank details are visible before signing and prevent a complete letter, without reversing an otherwise valid approval. Do not add unsigned details to a frozen letter or retroactively create letters for older approvals. Font/storage failures remain explicit and retryable from the same capture. Requesters retrieve their own private letters; administrative oversight alone grants no download access. DOC-002 depends on the DOC-001 export foundation. The owner explicitly requested both pending document features be pushed with the free-font change after local checks pass. Live Cloudinary verification and staff acceptance remain separately reported deployment checks; they do not block this development push.
 
 ## Requisition PDF reference (owner request, 2026-10-11)
 
@@ -173,3 +173,10 @@ Requesters may delete only their own drafts. Retain audit and signed evidence in
 ## Automatic supporting uploads
 
 File selection starts upload immediately. New-form uploads must not require creating a draft first. Temporarily buffer validated files privately by requester, company and creation key; expire them after 24 hours, enforce the configured per-file and per-person pending count limits, and clean expired bytes hourly/startup. Saving claims the exact supplied upload IDs into permanent Cloudinary attachments atomically with the draft and audit. Reject expired, missing, foreign or changed file sets rather than silently dropping documents. Use deterministic private object keys for safe retries. No document scanner is part of this release.
+
+
+## HOD self-approval and department sub-accounts (owner decision, 2026-10-11)
+
+New submissions use bnh-doa-v2. A current, unique HOD of the requester's own department may approve their own ₦1–₦5 million requisition through a separate fresh approval signature. Submission alone does not approve it. The frozen revision must explicitly capture this exception; historical v1 submissions retain their recorded route. Chief of Staff/MD floors still win for multiple officeholders. Self-reject/return is not offered; the requester may retract before action under the existing rules.
+
+Administrators with organisation:manage configure the department sub-account in Organisation & Authority → Departments. Require active company/department, exact ten-digit account numbers, version conflicts and atomic audit. Bind department identity, source, account version and bank details into the approval challenge; edits invalidate stale signatures. Use the frozen department debit details in the immutable transfer letter, with the actual approval signature. Missing sub-account details remain explicit and never fall back to the company account or rewrite an approved letter. Existing ordinary staff/company-account and Board separation rules remain.

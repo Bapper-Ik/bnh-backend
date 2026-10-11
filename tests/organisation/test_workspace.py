@@ -37,7 +37,7 @@ async def test_workspace_scope_matrix_and_restrictions(staff_context, sessions):
         "Board",
     ]
     assert data["matrix"][1]["authorities"] == [
-        "Chief of Staff",
+        "Self-Approval (Department Sub-Account)",
         "Chief of Staff",
         "Managing Director",
         "Board",

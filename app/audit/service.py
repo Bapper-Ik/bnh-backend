@@ -45,6 +45,7 @@ register_events(
     "organisation.created",
     "organisation.updated",
     "organisation.debit_account.updated",
+    "organisation.department_debit_account.updated",
     "requisition.transfer.queued",
     "office.assignment_failed",
     "office.assigned",

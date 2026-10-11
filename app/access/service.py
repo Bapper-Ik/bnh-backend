@@ -9,6 +9,7 @@ from sqlalchemy.sql.elements import ColumnElement
 from app.access.models import ReviewGrant
 from app.access.principal import Principal
 from app.access.roles import is_system_administrator
+from app.authority.self_approval import hod_self_approval, hod_self_approval_scope
 from app.board.models import ChairmanDecision, Resolution
 from app.core.errors import DomainError
 from app.evidence.models import Attachment
@@ -77,7 +78,7 @@ def request_scope(
             .join(Entity, Entity.id == Office.entity_id)
             .where(
                 Requisition.state != "DRAFT",
-                or_(Requisition.requester_id != actor.id, board_role),
+                or_(Requisition.requester_id != actor.id, board_role, hod_self_approval_scope()),
                 Office.identity_id == actor.id,
                 Office.entity_id == Requisition.entity_id,
                 Office.active.is_(True),
@@ -258,22 +259,23 @@ async def require_action(
                 if current.department_id == req.department_id:
                     return
     elif action in {"approve", "reject", "return"}:
-        if req.requester_id == actor.id:
-            raise DomainError(
-                "SELF_APPROVAL_PROHIBITED", "You cannot approve your own requisition."
-            )
-        if (
-            req.state == "PENDING_AUTHORITY"
-            and req.current_revision_id
-            and req.requester_id != actor.id
+        revision = (
+            await session.get(Revision, req.current_revision_id)
+            if req.current_revision_id
+            else None
+        )
+        if req.requester_id == actor.id and not (
+            action == "approve" and revision and hod_self_approval(req, revision)
         ):
-            revision = await session.get(Revision, req.current_revision_id)
-            if revision and revision.authority != "board":
-                office = await officeholder(
-                    session, req.entity_id, revision.authority, req.department_id
-                )
-                if office.identity_id == actor.id and revision.approver_id == actor.id:
-                    return
+            raise DomainError(
+                "SELF_APPROVAL_PROHIBITED", "You cannot take this decision on your own requisition."
+            )
+        if req.state == "PENDING_AUTHORITY" and revision and revision.authority != "board":
+            office = await officeholder(
+                session, req.entity_id, revision.authority, req.department_id
+            )
+            if office.identity_id == actor.id and revision.approver_id == actor.id:
+                return
     elif action in {"board_record", "board_confirm", "board_return"}:
         from app.board.service import available, board_access, records
 

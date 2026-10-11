@@ -22,10 +22,11 @@ from app.authority.policy import Authority, calculate_lines, resolve
     "offices,floor",
     [
         (set(), Authority.HOD),
-        ({"hod"}, Authority.CHIEF_OF_STAFF),
+        ({"hod"}, Authority.HOD),
         ({"chief_of_staff"}, Authority.MD),
         ({"md"}, Authority.BOARD),
         ({"hod", "md"}, Authority.BOARD),
+        ({"hod", "chief_of_staff"}, Authority.MD),
     ],
 )
 def test_amount_boundaries_and_all_requester_floors(amount, expected, offices, floor):

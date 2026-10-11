@@ -7,7 +7,7 @@ The system determines the required approver using **whichever requires higher au
 | Person raising the requisition | ₦1–₦5 million | Above ₦5 million–₦100 million | Above ₦100 million–₦500 million | Above ₦500 million |
 |---|---|---|---|---|
 | **Staff member, excluding the officeholders below** | Their department’s HOD | Chief of Staff | Managing Director | Board |
-| **HOD** | Chief of Staff | Chief of Staff | Managing Director | Board |
+| **HOD** | Self-Approval (department sub-account) | Chief of Staff | Managing Director | Board |
 | **Chief of Staff** | Managing Director | Managing Director | Managing Director | Board |
 | **Managing Director** | Board | Board | Board | Board |
 
@@ -19,9 +19,9 @@ The upper limits are inclusive. **Exactly ₦5 million belongs to the HOD amount
 
 For HOD-level requests, the system identifies the **HOD of the requester’s own department** from the official staff and department records. Above that level, the requesting department does not change the required authority.
 
-**Self-request escalation must never lower an amount-based requirement.** For example, an HOD’s ₦3 million request goes to the Chief of Staff, but their ₦200 million request goes to the MD, and their ₦600 million request goes to the Board.
+**Self-request escalation must never lower an amount-based requirement.** For example, an HOD’s ₦3 million request allows a separate self-approval using the department sub-account, but their ₦200 million request goes to the MD, and their ₦600 million request goes to the Board.
 
-Nobody can approve their own request by switching roles or using another account linked to the same person. Likewise, a senior officer does not automatically gain permission to replace the assigned approver. Missing or conflicting assignments must block the affected action rather than trigger an invented substitute. :chatgpt-content-reference{index="1"}
+Current eligible HODs may explicitly approve their own requisitions from ₦1 through ₦5,000,000 using the department sub-account. This is the only self-approval exception; higher Chief of Staff/MD requester floors still apply. Switching roles or accounts does not bypass any other restriction. Likewise, a senior officer does not automatically gain permission to replace the assigned approver. Missing or conflicting assignments must block the affected action rather than trigger an invented substitute. :chatgpt-content-reference{index="1"}
 
 The assigned individual approver can **approve, reject, or return the requisition for correction**. Returned requests require a new revision, fresh signing, and recalculated routing when resubmitted.
 
@@ -58,3 +58,5 @@ If the Board approved the request, confirmation finalises that approval. If the 
 We have **not defined an alternative approver when the Chairman is the requester, the same person occupies both Board roles, or an officeholder is unavailable**. Those cases must remain blocked until BNH authorises an arrangement—not bypassed automatically. :chatgpt-content-reference{index="7"}
 
 Finally, **Accounts Verification, CAO/Admin, and Finance/Payment are excluded from this approval path. “Approved” means authorised—not paid.**
+
+The HOD exception applies to new submissions under policy bnh-doa-v2. Previously submitted requests keep their frozen routes. Submission and approval require separate signatures. Administrators configure department sub-accounts; the selected bank details are reviewed before approval and frozen into the generated transfer letter.

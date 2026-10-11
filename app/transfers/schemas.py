@@ -1,3 +1,6 @@
+from typing import Literal
+from uuid import UUID
+
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.banking import validate_account_number
@@ -41,6 +44,9 @@ class DebitAccountView(BaseModel):
 
 
 class TransferDetails(BaseModel):
+    debit_source: Literal["company", "department"] = "company"
+    department_id: UUID | None = None
+    department_name: str | None = None
     debit: DebitAccount | None = None
     debit_version: int = 0
     beneficiary_bank: str

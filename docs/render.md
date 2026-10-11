@@ -165,3 +165,12 @@ New-form uploads are validated and temporarily buffered in PostgreSQL, privately
 A storage or audit failure preserves the temporary upload and form for retry. Object keys include requester, creation key, file ID and digest, using the adapter's existing overwrite=false behavior to avoid duplicates on retry; see [Cloudinary's duplicate-upload guidance](https://cloudinary.com/documentation/upload_images#avoiding_duplicate_uploads). Already saved documents retain the existing evidence retention rules. An external upload that succeeds before a database rollback can leave an unreferenced private object if the user abandons the retry; automatic deletion of permanent evidence is not introduced.
 
 Verify on the deployed environment: select a PNG/PDF on a new form before Save draft, preview it, save, refresh, and preview/download it again. Also select a file on an existing draft; it must upload without an Upload document button. Local isolated-storage tests do not verify live Cloudinary credentials or account behavior.
+
+
+## DOA-001 HOD self-approval and department bank setup
+
+Deploy the backend first; its tracked Docker startup applies migration 0020 using the existing DATABASE_URL. Deploy the matching frontend next. No new environment settings or external service are required.
+
+Before an HOD approves an own request, an administrator opens **Organisation & Authority → Departments → Sub-Account** for that company/department and saves the approved debit bank, branch address, account name and exact ten-digit account number. Leading zeroes are preserved. New own-HOD requests from ₦1 through ₦5 million require a separate approval signature and use this sub-account exclusively. Other approvals retain the company debit account. Check the displayed source/beneficiary details before signing; missing details prevent a complete letter and never fall back to another account. Existing signed letters cannot be repaired by editing master bank details.
+
+New submissions use bnh-doa-v2. Already submitted requests retain their old route and bank-source policy. If an old pending request should use the new policy, its requester may use the existing Retract Requisition action only before any approver action, then review and resubmit with a fresh signature. Never alter stored submitted revisions directly.

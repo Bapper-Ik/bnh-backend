@@ -6,7 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.access.service import oversight_only, project_content, require_action
-from app.authority.policy import calculate_lines, resolve
+from app.authority.policy import Authority, calculate_lines, resolve
+from app.authority.self_approval import hod_self_approval
 from app.core.banking import validate_account_number
 from app.core.database import Identity
 from app.core.errors import DomainError
@@ -114,7 +115,7 @@ async def authorise_intent(
             approver = (
                 await officeholder(s, req.entity_id, route.authority.label, req.department_id)
             ).identity_id
-            if approver == actor.id:
+            if approver == actor.id and not (route.authority == Authority.HOD and "hod" in offices):
                 raise DomainError(
                     "SELF_APPROVAL_PROHIBITED", "You cannot approve your own requisition."
                 )
@@ -123,6 +124,7 @@ async def authorise_intent(
             "approver_id": str(approver) if approver else None,
             "policy_version": route.policy_version,
             "explanation": route.explanation,
+            "self_approval": approver == actor.id,
             "requester_offices": sorted(offices),
             "requester_appointment_ids": sorted(str(o.id) for o in appointments),
             "secretary_id": str(secretary.identity_id)
@@ -139,7 +141,7 @@ async def authorise_intent(
         assert revision
         requester_name = revision.requester_name
         current = await officeholder(s, req.entity_id, revision.authority, req.department_id)
-        if req.requester_id == actor.id:
+        if req.requester_id == actor.id and not hod_self_approval(req, revision):
             raise DomainError(
                 "SELF_APPROVAL_PROHIBITED", "You cannot approve your own requisition."
             )
@@ -243,7 +245,9 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
                 )
             if revision.approver_id == actor.id:
                 await require_action(s, req, actor, "approve")
-                actions = ["approve", "reject", "return"]
+                actions = (
+                    ["approve"] if req.requester_id == actor.id else ["approve", "reject", "return"]
+                )
         except DomainError as exc:
             decision_blocker = exc.message
     if revision and revision.authority == "board":

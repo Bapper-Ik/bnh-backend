@@ -54,7 +54,7 @@ Configuration APIs serialise sensitive account/appointment changes with database
 
 ## IAM-002 — `/api/v1/access`
 
-Every endpoint requires a current individual session. Identity, office, entity and reviewer scope come from the server. GETs are read-only; the review-grant mutation also requires exact Origin and CSRF. Unknown/unauthorised record IDs consistently return 404 RESOURCE_NOT_AVAILABLE. Mutating eligibility failures return 403 ACCESS_DENIED; self-approval is 409 SELF_APPROVAL_PROHIBITED. Never treat a client-edited capability list as authorisation.
+Every endpoint requires a current individual session. Identity, office, entity and reviewer scope come from the server. GETs are read-only; the review-grant mutation also requires exact Origin and CSRF. Unknown/unauthorised record IDs consistently return 404 RESOURCE_NOT_AVAILABLE. Mutating eligibility failures return 403 ACCESS_DENIED; self-approval outside the confirmed v2 HOD exception is 409 SELF_APPROVAL_PROHIBITED. Never treat a client-edited capability list as authorisation.
 
 - `GET /requisitions?limit=25&offset=0`: scope before counting/pagination, limit 1–100, offset >=0; returns `{items:[{requisition_id,actions,read_only}],total,limit,offset}`. No bank data/content is returned. Actions are safe current eligibility hints; every later mutation rechecks them.
 - `GET /requisitions/{id}`: same capability shape for an accessible record. More senior officers and technical admins receive no implicit access.
@@ -334,3 +334,17 @@ Requester details expose Delete draft only in Draft, and Retract requisition onl
 The shared Supporting documents component uploads immediately after file selection, with progress, Retry upload and Cancel file after failures. On a new requisition, GET/POST `/staged-attachments` use entity_id, creation_key and (for POST) upload_key/filename; owner-only GET content and DELETE use `/staged-attachments/{id}`. Files can be previewed/removed before any draft exists. Creation passes the exact `staged_upload_ids`; the backend claims those files into permanent private attachments atomically. Existing saved-draft upload endpoints are unchanged.
 
 The form preserves entries during failures, prevents company changes while files are attached, and blocks Save while uploads are pending or unresolved. A documents-changed error refreshes the file list without discarding form values. Files on unsaved forms expire after 24 hours; save the draft to keep them. Deploy migration 0019 before this frontend. No extra Upload document click or scanner setup.
+
+
+## WEB-002 — Consistent wording across screens
+
+All fourteen screens and shared dialogs use Title Case for headings, labels and buttons, while descriptions and messages use sentence case. The requisition details Vendor label is Vendor Name. HOD/MD/Chief of Staff/Board codes display readable office names; Board outcomes use business labels. Accessible names and browser selectors match the visible copy. This is a frontend presentation change; API codes, entered names, filenames and signed data remain unchanged.
+
+
+## DOA-001 / DOC-002 — HOD self-approval and department sub-accounts
+
+New submissions use bnh-doa-v2. A unique current HOD of the requester’s own department may approve an own request from ₦1 through ₦5 million, using a separate approval signature after submission. My Tasks and notifications include that assignment. Higher office floors still apply; existing submitted routes stay frozen. Self-reject/return is not offered; requester retraction remains available before action.
+
+Screen 12 → Departments → Sub-Account reuses the bank drawer. GET/PUT `/organisation/departments/{department_id}/debit-account` uses the existing DebitAccountView/Update schema, `organisation:manage`, active scope, ten-digit string validation, expected-version conflicts and atomic audit. No settings are exposed to ordinary HODs.
+
+Approval challenge `transfer_details` now includes `debit_source` (`company` or `department`), optional `department_id` and `department_name`. Show the source and exact account details before signing. Eligible self-approvals use only the department account; other routes use the company account. Missing details are shown before approval and create an explicit unavailable letter, never a silent fallback. Changing the account invalidates a prepared challenge; later edits cannot rewrite an approved letter. Deploy backend migration 0020 before the updated frontend. No environment variables are added.

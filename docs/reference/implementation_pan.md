@@ -53,7 +53,7 @@ The existing `AGENTS.md` specifies how code, tests, branches, permissions, activ
 
 Custodian is BNH's shared system for requesting, authorising, recording, and auditing procurement/spend requests and, subsequently, contracts, compliance obligations, and capital movements. It is one system with a shared data foundation, not four disconnected applications.
 
-Today's executable scope is the Requisitions & Delegation of Authority Engine. Its purpose is to route each request to the correct authority, prevent unauthorised and self-approval, preserve the evidence behind each decision, and allow real BNH staff to use the deployed application independently.
+Today's executable scope is the Requisitions & Delegation of Authority Engine. Its purpose is to route each request to the correct authority, prevent unauthorised approval, including self-approval outside the confirmed HOD exception, preserve the evidence behind each decision, and allow real BNH staff to use the deployed application independently.
 
 The system records financial authorisation. It does not execute a payment, prove payment, confirm receipt of goods, or claim a capital draw has occurred.
 
@@ -83,7 +83,7 @@ Modules 2–4 are future operational implementations. Their design-document obli
 
 ## 1.5 Requirement Sources and Precedence
 
-**Confirmed business requirements [C]:** Nasir's explicit decisions in this conversation: amount bands; direct routing; HOD/Chief of Staff/MD requester escalation; no legacy approval stages; Board meeting resolutions only; Company Secretary records; Board Chairman gives the final in-system sign-off; the two people must differ; and no self-approval.
+**Confirmed business requirements [C]:** Nasir's explicit decisions in this conversation: amount bands; direct routing; HOD/Chief of Staff/MD requester escalation; no legacy approval stages; Board meeting resolutions only; Company Secretary records; Board Chairman gives the final in-system sign-off; the two people must differ; and the HOD self-approval exception confirmed on 2026-10-11.
 
 **Supplied engagement requirements [B]:** the shared four-module architecture; real multi-user authentication; enforced authority; persistent storage; signature capture; immutable event log; reachable deployment; three genuine staff-operated resolved requisitions before the defence; the all-four-module design pack; and BNH's visual standard.
 
@@ -134,7 +134,7 @@ Creates and signs their own requisitions, maintains drafts, sees the status and 
 
 ## 2.2 Head of Department (HOD)
 
-Approves eligible requests from their assigned department only when the total is at most ₦5,000,000 and the requester is not themselves. An HOD's own request goes to at least the Chief of Staff; a higher amount can require MD or Board authority.
+Approves eligible requests from their assigned department when the total is at most ₦5,000,000. An HOD may separately approve their own ₦1–₦5 million request using the department sub-account. Higher amounts route to Chief of Staff, MD or Board; higher requester appointments retain their floors.
 
 ## 2.3 Chief of Staff
 
@@ -173,11 +173,11 @@ Performs deterministic routing, scheduled/retried notification delivery, evidenc
 | Requester                               | ₦1–₦5,000,000 inclusive | Above ₦5,000,000–₦100,000,000 inclusive | Above ₦100,000,000–₦500,000,000 inclusive | Above ₦500,000,000 |
 | --------------------------------------- | ----------------------- | --------------------------------------- | ----------------------------------------- | ------------------ |
 | Staff excluding the officeholders below | Own department's HOD    | Chief of Staff                          | MD                                        | Board              |
-| HOD                                     | Chief of Staff          | Chief of Staff                          | MD                                        | Board              |
+| HOD | Self-Approval (Department Sub-Account) | Chief of Staff                          | MD                                        | Board              |
 | Chief of Staff                          | MD                      | MD                                      | MD                                        | Board              |
 | MD                                      | Board                   | Board                                   | Board                                     | Board              |
 
-The resolver uses `max(amount_required_authority, requester_minimum_authority)` with the order HOD < Chief of Staff < MD < Board. Ordinary staff have no raised requester floor; HODs have a Chief of Staff floor; the Chief of Staff has an MD floor; the MD has a Board floor.
+The resolver uses `max(amount_required_authority, requester_minimum_authority)` with the order HOD < Chief of Staff < MD < Board. Ordinary staff have no raised requester floor; HODs have no raised floor under policy v2; the Chief of Staff has an MD floor; the MD has a Board floor.
 
 This ordering is only a routing calculation. It does not grant blanket permission for a more senior user to approve a request assigned to somebody else. Exactly ₦5,000,000 is in the HOD amount band; exactly ₦100,000,000 is in the Chief of Staff band; exactly ₦500,000,000 is in the MD band. Zero, values below ₦1, negative values, unsupported currencies, and non-finite money are invalid at submission.
 
@@ -187,7 +187,7 @@ Use all applicable authenticated requester appointments, not a selected browser 
 
 | ID   | Invariant                                                                                                                                     |
 | ---- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| G-01 | No person approves their own requisition, including through a second role or an administrator account mapped to the same staff identity.      |
+| G-01 | Only the current department HOD may approve their own ₦1–₦5 million request, under the explicit v2 exception with a separate signature and department debit account. All other identity-based self-approval remains prohibited.      |
 | G-02 | Routing is direct to the required authority. No HOD → Chief of Staff → MD chain is added.                                                     |
 | G-03 | Requester escalation never reduces the authority required by the amount.                                                                      |
 | G-04 | A HOD route must use the submitting requester's recorded department and a valid HOD appointment for it.                                       |
@@ -284,7 +284,7 @@ The groups below are implementation work areas inside the one Custodian system, 
 | 5     | IAM-002    | Role Capabilities, Record Visibility, and Current-Authority Checks      |
 | 6     | VEN-001    | Vendor Capture, Scoped Lookup, and Beneficiary Versions                 |
 | 7     | EVD-001    | Private File Handling and Transaction-Bound Signature Capture           |
-| 8     | DOA-001    | Authority Policy v1, Direct Routing, and Self-Request Escalation        |
+| 8     | DOA-001    | Authority Policy v2, Direct Routing, and HOD Self-Approval        |
 | 9     | REQ-001    | Draft Requisition, Vendor/Scope Capture, and Exact Cost Breakdown       |
 | 10    | REQ-002    | Signed Submission, Immutable Revision, and Automatic Assignment         |
 | 11    | APR-001    | Eligible Approver Decisions, Returns, and Signed Resubmission           |
@@ -998,7 +998,7 @@ Implement the confirmed matrix as a deterministic, independently tested business
 
 ### Feature Name
 
-Authority Policy v1, Direct Routing, and Self-Request Escalation
+Authority Policy v2, Direct Routing, and HOD Self-Approval
 
 ### Description
 
@@ -1009,6 +1009,8 @@ Calculate the required approval authority from the exact NGN total and the reque
 **Status:** Implemented
 
 **Implementation Evidence:** Exact decimal Authority Policy bnh-doa-v1, inclusive kobo boundaries, all sixteen requester/amount cells, highest-office floor, department-scoped HOD and current assignment checks. Read-only/inactive officeholders are excluded and account/appointment eligibility is locked for decisions. Preview and submission share server rules; immutable revision context preserves offices and routing. tests/authority and tests/requisitions cover the sample total, boundaries, self-request escalation, assignment blockers and forged fields. Exact staged release passed Ruff/format/mypy, 208 backend tests on fresh local PostgreSQL, frontend lint/format/types, six unit tests, production build and all fifteen browser journeys (2026-10-08). Publication is recorded by the feature commits on origin/dev.
+
+**Owner extension — HOD self-approval (2026-10-11):** New bnh-doa-v2 submissions permit the current unique department HOD to separately approve their own ₦1–₦5 million request. Approval inbox, live eligibility and notifications recognise only the frozen v2 exception. Higher requester offices retain their floors; older submissions retain their route. Migration 0020 adds versioned administrator-managed department debit accounts. The fresh approval signature binds that sub-account into the payment letter; missing department details never fall back to the company account. Screens 6–8 and 12 are reused. Verification is recorded in task_done.md.
 
 **Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
 
@@ -1028,7 +1030,7 @@ System; requesters and authorised approvers may view their request's routing exp
 
 1. Validate an exact positive submission amount and supported currency.
 2. Resolve the amount band using the inclusive boundaries in Section 3.1.
-3. Determine the highest applicable requester floor: HOD→Chief of Staff; Chief of Staff→MD; MD→Board.
+3. Determine the highest applicable requester floor: Chief of Staff→MD; MD→Board. HODs may explicitly approve their own ₦1–₦5 million requests under policy v2.
 4. Select the higher required authority, scope it to the correct company/department, and resolve the unique appointment.
 5. Apply identity and assignment conflict checks, returning a typed blocker where needed.
 6. Return the immutable policy identifier, routing reason, authority, scope, and assignment result.
@@ -1069,7 +1071,7 @@ The exact confirmed authority is returned consistently for every valid amount/re
 - [x] All sixteen matrix cells pass parameterised tests.
 - [x] Tests include one kobo below, exactly at, and one kobo above every threshold.
 - [x] HOD department mismatch and multiple overlapping executive assignments produce explicit denial/blockers.
-- [x] Role-switching cannot avoid an MD or HOD requester floor.
+- [x] Role-switching cannot avoid higher requester floors or expand the HOD self-approval exception.
 - [x] The resolver works in a service test without a browser, and APIs cannot override its result.
 
 ---
@@ -1185,7 +1187,7 @@ Signed Submission, Immutable Revision, and Automatic Assignment
 
 ### Description
 
-Turn a complete draft into a signed, versioned request routed by Authority Policy v1. Persist the reviewed financial content, declaration, route, and mandatory events consistently.
+Turn a complete draft into a signed, versioned request routed by the current Authority Policy v2. Persist the reviewed financial content, declaration, route, and mandatory events consistently.
 
 ### Implementation Status
 
@@ -1199,7 +1201,7 @@ Turn a complete draft into a signed, versioned request routed by Authority Polic
 
 ### Requirement Basis
 
-[C] routing and no self-approval; [B] signature/evidence and staff use; [F] originator declaration; [D] atomic/versioned implementation.
+[C] routing and the narrowly scoped HOD self-approval exception; [B] signature/evidence and staff use; [F] originator declaration; [D] atomic/versioned implementation.
 
 ### Dependencies
 
@@ -1324,7 +1326,7 @@ Request UUID/submitted revision/expected version; actor and current appointment;
 ### Business Rules and Validations
 
 - Only the specifically eligible assigned officeholder may act; broad permissions or seniority do not create a substitute.
-- No self-approval by identity. No client action can select a different required authority.
+- Self-approval is limited to the frozen v2 HOD exception through ₦5 million, with live department/office eligibility and a separate signature. No client action can select another required authority.
 - The approver cannot amend the amount or vendor before signing. Return the request instead.
 - A return is not a rejection or a completed authorisation. Do not count it as a resolved genuine case.
 - The requester can edit only the new working revision after return; the prior signed snapshot remains immutable.
@@ -2103,6 +2105,8 @@ Deliver the complete self-service browser journey for staff to prepare, sign, su
 
 **Shared branding/login correction (2026-10-11):** Login now has an accessible Show/Hide password button and omits the requested introductory sentence. The supplied LOGO.png is used in public, desktop and mobile branding; the shared footer reads exactly “© 2026 Brendan Nicholas Holdings. All rights reserved.” across public/workspace/error layouts. Ten connected authentication/mobile/responsive browser tests, six unit tests, lint/format/type checks, production build and frontend Docker build pass. Login and 320px workspace branding were visually checked. No backend or API change.
 
+**Interface wording follow-up:** All fourteen screen templates and shared dialogs use Title Case for headings, labels and actions, with sentence-case explanations. Requisition vendor details now label the supplier as Vendor Name; authority codes and Board outcomes have readable display labels. Verification and publication are recorded in task_done.md.
+
 ### Requirement Basis
 
 Confirmed business scope plus the explicitly identified implementation defaults in Section 1.6.
@@ -2310,7 +2314,7 @@ Release identifier; fixture definitions; environment settings without secrets; t
 - No deleting/faking tests, replacing PostgreSQL with in-memory semantics, or changing matrix expectations to force a pass.
 - No unauthorised production penetration activity; use the approved isolated test environment.
 - Performance statements require a defined workload and actual measurements. Do not claim “enterprise-certified” or a security certification from this test report.
-- Any unauthorised approval, self-approval, wrong threshold route, mutable evidence, data loss, or unauthorised sensitive read is release-blocking.
+- Any unauthorised approval, self-approval outside the confirmed HOD exception, wrong threshold route, mutable evidence, data loss, or unauthorised sensitive read is release-blocking.
 - Fixtures remain synthetic and separated from production; never count these as the three genuine requisitions.
 
 ### API and Interface Contract
@@ -2673,9 +2677,9 @@ Test unsupported currency, NaN, Infinity, exponent/decimal inputs under the acce
 
 ## B.2 Requester Floors and Department Scope
 
-Use at least two departments with different HODs. Test all sixteen cells of Section 3.1. Specifically include an HOD's ₦1 request to Chief of Staff, HOD's ₦200 million request to MD, Chief of Staff's ₦1 request to MD, Chief of Staff's above-₦500 million request to Board, and MD's ₦1 request to Board.
+Use at least two departments with different HODs. Test all sixteen cells of Section 3.1. Specifically include an HOD's ₦1 request explicitly self-approved using the department sub-account, HOD's ₦200 million request to MD, Chief of Staff's ₦1 request to MD, Chief of Staff's above-₦500 million request to Board, and MD's ₦1 request to Board.
 
-Test users with multiple appointments, role switching in the browser, stale role claims, department transfer, deactivation, missing HOD, ambiguous Chief of Staff scope, a wrong-department HOD, a more senior person trying to substitute for an assigned lower office, and a single person occupying conflicting offices. No result may reduce the minimum authority or permit self-approval.
+Test users with multiple appointments, role switching in the browser, stale role claims, department transfer, deactivation, missing HOD, ambiguous Chief of Staff scope, a wrong-department HOD, a more senior person trying to substitute for an assigned lower office, and a single person occupying conflicting offices. No result may reduce the required authority or permit self-approval outside the confirmed HOD exception.
 
 ## B.3 Signing, Versions, and Races
 

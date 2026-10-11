@@ -30,3 +30,5 @@ The file I gave you grouped the interface into broad feature blocks instead of d
 The Board workspace can have distinct Secretary and Chairman views without becoming two applications. Likewise, the HOD, Chief of Staff, and MD can use the same approval interface while the backend enforces their different authority.
 
 **That is the proposed count: 14 reusable screen templates—not 14 screens for every user, and not one screen per feature.** The development file should have mapped every feature to these screens, with the fields, actions, permissions, and states specified explicitly.
+
+HOD self-approval reuses screens 6–8: submit the requisition, then explicitly sign Approve from its details or My Tasks. Eligible own requests from ₦1 through ₦5 million debit the department sub-account. Administrators configure it through a drawer in screen 12 → Departments → Sub-Account. No extra screen or payment-execution flow.

@@ -6,7 +6,7 @@
 4. **Dashboard** — View request counts, recent activity, and outstanding tasks according to the user’s permissions.
 5. **Vendor management** — Store vendor information, contacts, and bank details.
 6. **Requisition management** — Create, save, edit, and submit requests with scope, cost items, and automatically calculated totals.
-7. **Automatic approval routing** — Apply our agreed amount thresholds and requester-escalation rules, with no self-approval.
+7. **Automatic approval routing** — Apply our agreed amount thresholds and requester-escalation rules, with the authorised HOD self-approval exception through ₦5 million and department sub-account letters.
 8. **Approval inbox** — Review assigned requests and approve, reject, or return them for correction.
 9. **Board approval workflow** — The Company Secretary records the meeting resolution; a different person, the Board Chairman, reviews and signs off.
 10. **Declarations and signature capture** — Capture the requester’s declaration and signatures tied to the exact request or decision.

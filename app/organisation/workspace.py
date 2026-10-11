@@ -224,7 +224,12 @@ async def workspace(
             ),
             AuthorityRow(
                 requester="Head of Department",
-                authorities=["Chief of Staff", "Chief of Staff", "Managing Director", "Board"],
+                authorities=[
+                    "Self-Approval (Department Sub-Account)",
+                    "Chief of Staff",
+                    "Managing Director",
+                    "Board",
+                ],
             ),
             AuthorityRow(
                 requester="Chief of Staff",
@@ -241,7 +246,7 @@ async def workspace(
         ],
         rules=[
             "Upper limits are inclusive. Routing is direct to the higher of the amount requirement and requester office minimum.",
-            "No self-approval or substitute authority through seniority. Missing or conflicting appointments block the affected action.",
+            "HODs may approve their own requests from ₦1 to ₦5 million using their department sub-account and a separate approval signature. Other self-approval and substitutes through seniority are prohibited; missing or conflicting appointments block the action.",
             "Appointments apply only to their named company. A holding-company appointment does not automatically apply to subsidiaries.",
             "Board decisions require a meeting resolution recorded and signed by the Company Secretary, then confirmed and signed by a different Board Chairman who is also different from the requester.",
             "Board confirmation preserves the meeting outcome: approval, rejection, deferment or conditional approval. Unresolved conditions remain on hold.",
