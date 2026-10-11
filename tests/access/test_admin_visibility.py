@@ -102,7 +102,7 @@ async def test_full_admin_without_membership_sees_cross_company_drafts_and_count
     assert (await c.get("/api/v1/requisitions/" + second["id"])).status_code == 200
 
 
-async def test_admin_reads_redacted_current_and_signed_versions_without_files_or_decisions(
+async def test_admin_reads_full_vendor_details_without_files_or_decisions(
     context, organisation, administrator, sessions
 ):
     c = context[0]
@@ -132,8 +132,11 @@ async def test_admin_reads_redacted_current_and_signed_versions_without_files_or
     path = "/api/v1/requisitions/" + req["id"]
     for suffix in ("", "?revision=1"):
         r = await c.get(path + suffix)
-        assert r.status_code == 200 and "0000000099" not in r.text and "Private bank" not in r.text
-        assert r.json()["content"]["vendor"]["account_number"] == "" and r.json()["oversight_only"]
+        assert r.status_code == 200 and "0000000099" in r.text and "Private bank" in r.text
+        assert (
+            r.json()["content"]["vendor"]["account_number"] == "0000000099"
+            and r.json()["oversight_only"]
+        )
         assert (
             r.json()["next_action"] is None
             or r.json()["next_action"]["actor_name"] == organisation["people"]["hod"]["name"]
@@ -217,7 +220,9 @@ async def test_admin_vendor_reads_allow_all_companies_without_granting_writes(
     for suffix in ("", "/versions/1"):
         r = await c.get("/api/v1/vendors/" + made["id"] + suffix)
         assert (
-            r.status_code == 200 and r.json()["data"]["bank"] is None and not r.json()["can_update"]
+            r.status_code == 200
+            and r.json()["data"]["bank"]["account_number"] == "0000000001"
+            and not r.json()["can_update"]
         )
     assert (
         await c.post(

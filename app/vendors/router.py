@@ -13,7 +13,14 @@ from app.organisation.models import Department, Entity, Membership
 from app.organisation.service import membership
 from app.vendors.models import Vendor, VendorVersion
 from app.vendors.schemas import CreateVendor, UpdateVendor, VendorPage, VendorSummary, VendorView
-from app.vendors.service import add_version, require_write, scoped_vendor, view
+from app.vendors.service import (
+    add_version,
+    can_read_bank,
+    can_read_entity_banks,
+    require_write,
+    scoped_vendor,
+    view,
+)
 
 router = APIRouter(prefix="/api/v1/vendors", tags=["Vendors"])
 
@@ -80,6 +87,7 @@ async def list_vendors(
     rows = (
         await s.execute(query.order_by(Vendor.created_at, Vendor.id).offset(offset).limit(limit))
     ).all()
+    entity_bank_access = await can_read_entity_banks(s, actor, entity_id)
     return VendorPage(
         items=[
             VendorSummary(
@@ -88,7 +96,13 @@ async def list_vendors(
                 version=v.version,
                 name=str(version.data["name"]),
                 registration_id=str(version.data.get("registration_id", "")),
-                bank_details_state="restricted" if version.beneficiary_id else "unknown",
+                bank_details_state=(
+                    "unknown"
+                    if not version.beneficiary_id
+                    else "supplied"
+                    if can_read_bank(v, actor, entity_access=entity_bank_access)
+                    else "restricted"
+                ),
             )
             for v, version in rows
         ],
@@ -104,7 +118,7 @@ async def create_vendor(
     actor: Actor = Depends(current_actor),
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> VendorView:
-    require_write(None, actor)
+    await require_write(s, None, actor)
     await membership(s, actor.id, body.entity_id)
     vendor = Vendor(
         id=uuid4(),
@@ -138,7 +152,7 @@ async def update_vendor(
     s: AsyncSession = Depends(get_session, scope="function"),
 ) -> VendorView:
     vendor = await scoped_vendor(s, vendor_id, actor)
-    require_write(vendor, actor)
+    await require_write(s, vendor, actor)
     if vendor.version != body.expected_version:
         raise DomainError("REVISION_CONFLICT", "Vendor details changed. Reload before updating.")
     vendor.version += 1

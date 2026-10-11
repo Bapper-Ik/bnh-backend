@@ -473,7 +473,7 @@ async def test_concurrent_submission_records_one_revision_and_rejects_forged_con
 
 async def test_vendor_restricted_bank_is_never_copied(context, organisation):
     client, _, _ = context
-    await sign_in(client, organisation["people"]["staff"])
+    await sign_in(client, organisation["people"]["hod"])
     vendor = (
         await client.post(
             "/api/v1/vendors",
@@ -490,7 +490,7 @@ async def test_vendor_restricted_bank_is_never_copied(context, organisation):
             },
         )
     ).json()
-    await sign_in(client, organisation["people"]["hod"])
+    await sign_in(client, organisation["people"]["staff"])
     response = await client.post(
         "/api/v1/requisitions",
         json={

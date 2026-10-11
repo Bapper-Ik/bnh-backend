@@ -291,3 +291,7 @@ Backend-only template refinement follows `pdf-template.jpeg`. Existing Generate 
 ## DOC-001 / DOC-002 — Printed-content cleanup
 
 No frontend contract change. New PDFs omit internal signature IDs, hashes, export IDs and verification pages; routine short requisitions use one page. Business details and actual signatures remain. Existing files are retained; generate a new PDF to see the correction. Backend gate passed with 346 tests and both connected document browser journeys.
+
+## VEN-001 — Vendor bank visibility correction
+
+Vendor lists now show `Recorded` when full detail access is permitted, retaining the restricted label only for restricted readers. Ordinary staff can see vendors they created; eligible HOD/Chief of Staff/MD/Secretary/Chairman appointments and full administrators receive full details within existing company/oversight scope. Current and historical details and requisition vendor selection follow server authorization. Existing bank-read grants and read-only reviewer restrictions remain. All 46 browser journeys pass, including the new role/ordinary-peer journey and updated administrator checks; no API schema or environment changes.

@@ -7,7 +7,8 @@ from app.access.roles import is_system_administrator
 from app.audit.service import AuditDetails, record_event
 from app.core.errors import DomainError
 from app.identity.service import Actor
-from app.organisation.service import has_active_membership, membership
+from app.organisation.models import Office
+from app.organisation.service import eligible_offices, has_active_membership, membership
 from app.vendors.models import BeneficiaryVersion, Vendor, VendorVersion
 from app.vendors.schemas import BankDetails, VendorData, VendorView
 
@@ -28,20 +29,39 @@ async def scoped_vendor(
     return vendor
 
 
-def can_read_bank(vendor: Vendor, actor: Actor) -> bool:
-    return not actor.account.read_only and (
-        vendor.created_by == actor.id or "vendor:read_sensitive" in actor.account.permissions
+async def can_read_entity_banks(session: AsyncSession, actor: Actor, entity_id: UUID) -> bool:
+    if actor.account.read_only:
+        return False
+    if is_system_administrator(actor) or "vendor:read_sensitive" in actor.account.permissions:
+        return True
+    return (
+        await session.scalar(
+            eligible_offices()
+            .where(
+                Office.identity_id == actor.id,
+                Office.entity_id == entity_id,
+                Office.role.in_(["hod", "chief_of_staff", "md", "secretary", "chairman"]),
+            )
+            .limit(1)
+        )
+        is not None
     )
 
 
-def require_write(vendor: Vendor | None, actor: Actor) -> None:
+def can_read_bank(vendor: Vendor, actor: Actor, *, entity_access: bool = False) -> bool:
+    return not actor.account.read_only and (vendor.created_by == actor.id or entity_access)
+
+
+async def require_write(session: AsyncSession, vendor: Vendor | None, actor: Actor) -> None:
     if actor.account.read_only or (
         vendor
         and vendor.created_by != actor.id
         and "vendor:update" not in actor.account.permissions
     ):
         raise DomainError("ACCESS_DENIED", "You cannot maintain this vendor.", 403)
-    if vendor and not can_read_bank(vendor, actor):
+    if vendor and not can_read_bank(
+        vendor, actor, entity_access=await can_read_entity_banks(session, actor, vendor.entity_id)
+    ):
         raise DomainError(
             "ACCESS_DENIED", "Bank-detail access is required to replace a vendor version.", 403
         )
@@ -86,7 +106,9 @@ async def view(
     session: AsyncSession, vendor: Vendor, version: VendorVersion, actor: Actor
 ) -> VendorView:
     data = VendorData.model_validate(version.data)
-    allowed = can_read_bank(vendor, actor)
+    allowed = can_read_bank(
+        vendor, actor, entity_access=await can_read_entity_banks(session, actor, vendor.entity_id)
+    )
     beneficiary = (
         await session.get(BeneficiaryVersion, version.beneficiary_id)
         if version.beneficiary_id and allowed

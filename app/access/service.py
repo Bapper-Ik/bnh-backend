@@ -286,7 +286,9 @@ def project_content(
     content: dict[str, object], actor: Actor, *, oversight: bool = False
 ) -> tuple[dict[str, object], list[str]]:
     if not actor.account.read_only and (
-        not oversight or "vendor:read_sensitive" in actor.account.permissions
+        not oversight
+        or is_system_administrator(actor)
+        or "vendor:read_sensitive" in actor.account.permissions
     ):
         return content, []
     projected = dict(content)
