@@ -301,7 +301,7 @@ async def test_expired_signature_and_bank_redaction_on_replay(context, organisat
     req = await draft(client, organisation, "10")
     full = content("10")
     full["vendor"].update(
-        bank_name="Synthetic Bank", account_name="Synthetic supplier", account_number="001234"
+        bank_name="Synthetic Bank", account_name="Synthetic supplier", account_number="0000001234"
     )
     req = (
         await client.put(
@@ -344,7 +344,7 @@ async def test_vendor_selection_is_scoped_versioned_and_frozen(context, organisa
     await sign_in(client, person)
     data = {
         "name": "Synthetic selected supplier",
-        "bank": {"bank_name": "Bank", "account_number": "000123", "account_name": "Supplier"},
+        "bank": {"bank_name": "Bank", "account_number": "0000000123", "account_name": "Supplier"},
     }
     vendor = (
         await client.post(
@@ -360,7 +360,7 @@ async def test_vendor_selection_is_scoped_versioned_and_frozen(context, organisa
     response = await client.post("/api/v1/requisitions", json=body)
     assert response.status_code == 201, response.text
     req = response.json()
-    assert req["content"]["vendor"]["account_number"] == "000123"
+    assert req["content"]["vendor"]["account_number"] == "0000000123"
     req, _ = await signed(client, req, person, "submit")
     data["name"] = "Renamed supplier"
     assert (
@@ -483,7 +483,7 @@ async def test_vendor_restricted_bank_is_never_copied(context, organisation):
                     "name": "Synthetic private vendor",
                     "bank": {
                         "bank_name": "Bank",
-                        "account_number": "007700",
+                        "account_number": "0000007700",
                         "account_name": "Private",
                     },
                 },
@@ -553,7 +553,7 @@ async def test_complete_draft_roundtrip_and_immutable_attachment_metadata(
         registration_id="SYNTHETIC-RC",
         bank_name="Synthetic bank",
         account_name="Supplier",
-        account_number="00123",
+        account_number="0000000123",
     )
     full["lines"] = [
         {"description": f"Item {i}", "quantity": "1", "unit_price": str(price)}

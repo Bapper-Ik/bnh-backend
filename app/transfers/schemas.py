@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, model_validator
 
+from app.core.banking import validate_account_number
 from app.identity.schemas import Command
 
 
@@ -27,6 +28,11 @@ class DebitAccount(Command):
 class DebitAccountUpdate(Command):
     expected_version: int = Field(ge=0)
     data: DebitAccount
+
+    @model_validator(mode="after")
+    def valid_bank_number(self) -> "DebitAccountUpdate":
+        validate_account_number(self.data.account_number)
+        return self
 
 
 class DebitAccountView(BaseModel):

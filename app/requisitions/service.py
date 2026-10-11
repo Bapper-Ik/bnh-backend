@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.access.service import oversight_only, project_content, require_action
 from app.authority.policy import calculate_lines, resolve
+from app.core.banking import validate_account_number
 from app.core.database import Identity
 from app.core.errors import DomainError
 from app.evidence.models import Attachment
@@ -22,7 +23,7 @@ from app.requisitions.schemas import (
     UpdateRequest,
     VendorInfo,
 )
-from app.vendors.models import VendorVersion
+from app.vendors.models import BeneficiaryVersion, VendorVersion
 from app.vendors.service import scoped_vendor
 from app.vendors.service import view as vendor_view
 
@@ -82,6 +83,16 @@ async def authorise_intent(
                 "Provide all three bank details or leave all explicitly unsupplied.",
                 422,
             )
+        if content.vendor.account_number:
+            try:
+                validate_account_number(content.vendor.account_number)
+            except ValueError as exc:
+                raise DomainError("VALIDATION_FAILED", str(exc), 422) from exc
+        version_id = req.context.get("vendor_version_id")
+        if version_id:
+            version = await s.get(VendorVersion, UUID(str(version_id)))
+            if version:
+                await validate_vendor_account(s, version)
         appointments = [
             o for o in await active_offices(s, req.entity_id) if o.identity_id == actor.id
         ]
@@ -282,6 +293,20 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
     )
 
 
+async def validate_vendor_account(s: AsyncSession, version: VendorVersion) -> None:
+    if version.beneficiary_id:
+        bank = await s.get(BeneficiaryVersion, version.beneficiary_id)
+        assert bank
+        try:
+            validate_account_number(bank.account_number)
+        except ValueError as exc:
+            raise DomainError(
+                "VALIDATION_FAILED",
+                "The selected vendor needs a valid 10-digit bank account number. Ask its owner to correct it and select the updated vendor.",
+                422,
+            ) from exc
+
+
 async def select_vendor(
     s: AsyncSession, actor: Actor, entity_id: UUID, body: CreateRequest | UpdateRequest
 ) -> dict[str, object]:
@@ -294,6 +319,7 @@ async def select_vendor(
         raise DomainError("REVISION_CONFLICT", "Vendor details changed. Select the vendor again.")
     version = await s.get(VendorVersion, vendor.current_version_id)
     assert version
+    await validate_vendor_account(s, version)
     snapshot = await vendor_view(s, vendor, version, actor)
     data = snapshot.data
     bank = data.bank

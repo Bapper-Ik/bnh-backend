@@ -378,3 +378,18 @@ Removed the `Revision N` suffix from the letter's requisition reference, the `Si
 Verification: all 367 PostgreSQL backend tests passed, along with Ruff check/format and mypy. The updated one-page synthetic PDF was rendered with the bundled production fonts and visually inspected. Three connected document browser journeys (requisition export, manual-beneficiary transfer, and shared-vendor transfer) and the backend Docker build passed. Existing transfer regression assertions now verify one plain requisition reference and absence of all the removed wording while retaining the amount, accounts and approval signature checks.
 
 Deploy the backend update on `dev`; no frontend change, migration or new configuration is needed. Newly generated letters use this layout. Previously generated stored PDFs retain their original bytes. Preview: `output/pdf/payment-request-preview.pdf`, using synthetic test data only. No live deployment or staff-signature change is claimed.
+
+
+## WEB-002 — Formatted cost entry (2026-10-11)
+
+Unit prices display comma grouping and two decimal places outside editing. Focusing starts a blank entry; leaving it untouched restores the previous value, while typed/pasted values persist as exact decimal strings. Eight connected requisition/responsive browser tests, six unit tests, lint/format/type checks and production build pass. No backend or API change.
+
+
+## WEB-002 — Login visibility and shared branding (2026-10-11)
+
+Login now has an accessible Show/Hide password button and omits the requested introductory sentence. The supplied LOGO.png is used in public, desktop and mobile branding; the shared footer reads exactly “© 2026 Brendan Nicholas Holdings. All rights reserved.” across public/workspace/error layouts. Ten connected authentication/mobile/responsive browser tests, six unit tests, lint/format/type checks, production build and frontend Docker build pass. Login and 320px workspace branding were visually checked. No backend or API change.
+
+
+## REQ-001 / VEN-001 — Account and form validation (2026-10-11)
+
+New requisition/vendor/company-bank writes require exactly ten ASCII digits for supplied account numbers, preserving leading zeroes. Bank fields remain all-or-none and may be explicitly unknown. Trusted vendor selection and submission validate the captured account too. Historical read/export schemas remain compatible; no signed record is rewritten. Browser validation enforces bank completeness and account length, price/quantity precision and date order, and opens collapsed invalid bank fields before focusing them. Incomplete drafts remain supported. Full backend suite: 374 passed; all eight dedicated bank checks also passed, including one additional legacy-selection regression. Eleven connected requisition/vendor/transfer browser journeys, six frontend unit tests, static/type/format checks, production build and both Docker builds pass. OpenAPI was regenerated and compared: no shape change. No migration or new setting.

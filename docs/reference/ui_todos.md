@@ -307,3 +307,18 @@ Deploy backend and frontend from `dev`; no migration or new settings. Saved draf
 ## DOC-002 — Simplified payment-letter print layout
 
 Backend-only PDF correction: print the requisition reference without its revision suffix; omit the electronic-signing timestamp and the repeated-reference/page/payment-disclaimer footer. Existing requester preview and download controls need no changes. Deploy the backend; newly generated letters use the clean layout. Ready stored PDFs are not rewritten, and signature/revision evidence remains internal. No migration or new environment settings.
+
+
+## WEB-002 — Formatted cost entry (2026-10-11)
+
+Unit prices display comma grouping and two decimal places outside editing. Focusing starts a blank entry; leaving it untouched restores the previous value, while typed/pasted values persist as exact decimal strings. Eight connected requisition/responsive browser tests, six unit tests, lint/format/type checks and production build pass. No backend or API change.
+
+
+## WEB-002 — Login visibility and shared branding (2026-10-11)
+
+Login now has an accessible Show/Hide password button and omits the requested introductory sentence. The supplied LOGO.png is used in public, desktop and mobile branding; the shared footer reads exactly “© 2026 Brendan Nicholas Holdings. All rights reserved.” across public/workspace/error layouts. Ten connected authentication/mobile/responsive browser tests, six unit tests, lint/format/type checks, production build and frontend Docker build pass. Login and 320px workspace branding were visually checked. No backend or API change.
+
+
+## REQ-001 / VEN-001 — Account and form validation (2026-10-11)
+
+New requisition/vendor/company-bank writes require exactly ten ASCII digits for supplied account numbers, preserving leading zeroes. Bank fields remain all-or-none and may be explicitly unknown. Trusted vendor selection and submission validate the captured account too. Historical read/export schemas remain compatible; no signed record is rewritten. Browser validation enforces bank completeness and account length, price/quantity precision and date order, and opens collapsed invalid bank fields before focusing them. Incomplete drafts remain supported. Full backend suite: 374 passed; all eight dedicated bank checks also passed, including one additional legacy-selection regression. Eleven connected requisition/vendor/transfer browser journeys, six frontend unit tests, static/type/format checks, production build and both Docker builds pass. OpenAPI was regenerated and compared: no shape change. No migration or new setting.

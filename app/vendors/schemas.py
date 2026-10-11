@@ -1,8 +1,9 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
+from app.core.banking import validate_account_number
 from app.identity.schemas import Command
 
 
@@ -47,10 +48,22 @@ class CreateVendor(Command):
     entity_id: UUID
     data: VendorData
 
+    @model_validator(mode="after")
+    def valid_bank_number(self) -> "CreateVendor":
+        if self.data.bank:
+            validate_account_number(self.data.bank.account_number)
+        return self
+
 
 class UpdateVendor(Command):
     expected_version: int = Field(ge=1)
     data: VendorData
+
+    @model_validator(mode="after")
+    def valid_bank_number(self) -> "UpdateVendor":
+        if self.data.bank:
+            validate_account_number(self.data.bank.account_number)
+        return self
 
 
 class VendorSummary(BaseModel):

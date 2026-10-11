@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, TypeAdapter, field_validator, model_validator
 
 from app.authority.policy import calculate_lines, exact_decimal
+from app.core.banking import validate_account_number
 from app.history.schemas import NextAction
 from app.identity.schemas import Command
 from app.transfers.schemas import TransferDetails
@@ -84,11 +85,23 @@ class CreateRequest(Command):
     content: Content
     vendor_selection: VendorSelection | None = None
 
+    @model_validator(mode="after")
+    def valid_bank_number(self) -> "CreateRequest":
+        if self.content.vendor.account_number:
+            validate_account_number(self.content.vendor.account_number)
+        return self
+
 
 class UpdateRequest(Command):
     expected_version: int = Field(ge=1)
     content: Content
     vendor_selection: VendorSelection | None = None
+
+    @model_validator(mode="after")
+    def valid_bank_number(self) -> "UpdateRequest":
+        if self.content.vendor.account_number:
+            validate_account_number(self.content.vendor.account_number)
+        return self
 
 
 class StartRevision(Command):
