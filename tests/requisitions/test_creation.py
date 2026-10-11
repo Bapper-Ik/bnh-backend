@@ -197,7 +197,7 @@ async def test_documents_signed_manifest_private_access_and_outbox(context, orga
     assert submitted["state"] == "PENDING_AUTHORITY"
     assert (
         await client.post(f"/api/v1/requisitions/{req['id']}/actions", json=command)
-    ).json() == submitted
+    ).json() == {**submitted, "available_actions": []}
     assert (
         await client.delete(
             "/api/v1/attachments/" + file["id"], params={"expected_version": submitted["version"]}
@@ -455,7 +455,10 @@ async def test_concurrent_submission_records_one_revision_and_rejects_forged_con
         *[client.post(f"/api/v1/requisitions/{req['id']}/actions", json=command) for _ in range(2)]
     )
     assert [r.status_code for r in responses] == [200, 200]
-    assert responses[0].json() == responses[1].json()
+    assert {**responses[0].json(), "available_actions": []} == {
+        **responses[1].json(),
+        "available_actions": [],
+    }
     async with sessions() as s:
         assert (
             await s.scalar(

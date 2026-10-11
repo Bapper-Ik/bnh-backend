@@ -163,3 +163,8 @@ Evaluate active accounts, appointments, membership, department and company statu
 
 
 New account capture must use exactly 10 ASCII digits and preserve leading zeroes. Validate new writes and requisition selections/submissions, but keep historical signed records readable without rewriting them. Bank fields remain all-or-none; unknown bank details may remain empty.
+
+
+## Requester draft deletion and retraction
+
+Requesters may delete only their own drafts. Retain audit and signed evidence internally; deleted requests and their documents must disappear from ordinary reads, lists and downloads. Requesters may retract pending requests to Draft only before any approver decision or Board resolution work on that revision. Retraction preserves the submitted revision; resubmission creates a fresh signed revision and recomputes authority. Use expected versions, row locking, actor-bound idempotency and atomic audit for both actions.

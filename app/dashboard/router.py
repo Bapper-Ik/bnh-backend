@@ -33,6 +33,7 @@ PUBLIC_EVENTS = {
     "requisition.created": "Draft created",
     "requisition.updated": "Draft updated",
     "requisition.revision_created": "Correction started",
+    "requisition.retracted": "Requisition retracted",
     "requisition.submitted": "Requisition submitted",
     "requisition.approved": "Requisition approved",
     "requisition.rejected": "Requisition rejected",

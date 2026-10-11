@@ -16,12 +16,14 @@ from app.identity.models import Account
 from app.identity.service import Actor
 from app.organisation.models import Department, Entity, Membership, Office
 from app.organisation.service import eligible_offices, membership, officeholder
-from app.requisitions.models import Requisition, Revision
+from app.requisitions.models import Decision, Requisition, Revision
 
 Action = Literal[
     "read",
     "edit",
     "revise",
+    "delete",
+    "retract",
     "submit",
     "approve",
     "reject",
@@ -130,6 +132,7 @@ def request_scope(
             .scalar_subquery()
         )
         return and_(
+            Requisition.deleted_at.is_(None),
             offices,
             or_(
                 and_(
@@ -171,7 +174,10 @@ def request_scope(
         else false()
     )
     oversight = true() if include_oversight and is_system_administrator(actor) else false()
-    return or_(Requisition.requester_id == actor.id, offices, reviewer, oversight)
+    return and_(
+        Requisition.deleted_at.is_(None),
+        or_(Requisition.requester_id == actor.id, offices, reviewer, oversight),
+    )
 
 
 async def can_read(
@@ -227,12 +233,30 @@ async def require_action(
         raise DomainError(
             "ACCESS_DENIED", "Read-only reviewers cannot change or sign records.", 403
         )
-    if action in {"edit", "submit", "attachment_upload", "revise"}:
+    if action in {"edit", "submit", "attachment_upload", "revise", "delete"}:
         allowed_state = "RETURNED_FOR_REVISION" if action == "revise" else "DRAFT"
         if req.requester_id == actor.id and req.state == allowed_state:
             current = await membership(session, actor.id, req.entity_id)
             if current.department_id == req.department_id:
                 return
+    elif action == "retract":
+        if (
+            req.requester_id == actor.id
+            and req.state in {"PENDING_AUTHORITY", "AWAITING_BOARD_RESOLUTION"}
+            and req.current_revision_id
+        ):
+            acted = await session.scalar(
+                select(Decision.id).where(Decision.revision_id == req.current_revision_id)
+            )
+            board_started = await session.scalar(
+                select(Resolution.id)
+                .where(Resolution.revision_id == req.current_revision_id)
+                .limit(1)
+            )
+            if not acted and not board_started:
+                current = await membership(session, actor.id, req.entity_id)
+                if current.department_id == req.department_id:
+                    return
     elif action in {"approve", "reject", "return"}:
         if req.requester_id == actor.id:
             raise DomainError(

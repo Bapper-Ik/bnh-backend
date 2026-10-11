@@ -46,7 +46,20 @@ def visible_requests(actor: Actor):  # type: ignore[no-untyped-def]
     return (
         select(Requisition.id)
         .outerjoin(Revision, Revision.id == Requisition.current_revision_id)
-        .where(request_scope(actor, include_oversight=False))
+        .where(
+            or_(
+                request_scope(actor, include_oversight=False),
+                and_(
+                    Requisition.deleted_at.is_not(None),
+                    literal(actor.account.read_only),
+                    Requisition.entity_id.in_(
+                        select(ReviewGrant.entity_id).where(
+                            ReviewGrant.identity_id == actor.id, ReviewGrant.active.is_(True)
+                        )
+                    ),
+                ),
+            )
+        )
     )
 
 

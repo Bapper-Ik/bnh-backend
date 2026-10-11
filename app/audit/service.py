@@ -64,6 +64,8 @@ register_events(
     "requisition.submitted",
     "requisition.resubmitted",
     "requisition.revision_created",
+    "requisition.deleted",
+    "requisition.retracted",
     "requisition.routed",
     "requisition.approved",
     "requisition.rejected",

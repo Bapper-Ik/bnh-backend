@@ -212,7 +212,7 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
     if req.requester_id == actor.id and req.state == "DRAFT":
         try:
             await require_action(s, req, actor, "edit")
-            actions = ["edit", "submit"]
+            actions = ["edit", "submit", "delete"]
             route = resolve(
                 total_for(Content.model_validate(req.content)),
                 {
@@ -255,6 +255,15 @@ async def present(s: AsyncSession, req: Requisition, actor: Actor) -> RequestVie
         except DomainError as exc:
             if exc.code != "RESOURCE_NOT_AVAILABLE":
                 decision_blocker = exc.message
+    if req.requester_id == actor.id and req.state in {
+        "PENDING_AUTHORITY",
+        "AWAITING_BOARD_RESOLUTION",
+    }:
+        try:
+            await require_action(s, req, actor, "retract")
+            actions.append("retract")
+        except DomainError:
+            pass
     from app.history.service import history_page, next_action
 
     history = await history_page(s, req, actor)

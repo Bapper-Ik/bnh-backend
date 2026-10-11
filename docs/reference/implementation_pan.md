@@ -1191,6 +1191,8 @@ Turn a complete draft into a signed, versioned request routed by Authority Polic
 
 **Implementation Evidence:** Signed submission freezes revision content, vendor provenance, identities/scope, requester offices, declaration/authentication evidence, file versions/hashes and policy route. Signature, submission/routing audit and durable notification intent commit atomically. Tests cover retries, races, wrong-actor challenges, expired/stale content, provider failures and rollback. Staff enter PENDING_AUTHORITY directly; low-value MD requests enter AWAITING_BOARD_RESOLUTION without a fabricated Board outcome. Exact staged release passed Ruff/format/mypy, 208 backend tests on fresh local PostgreSQL, frontend lint/format/types, six unit tests, production build and all fifteen browser journeys (2026-10-08). Publication is recorded by the feature commits on origin/dev.
 
+**Owner extension (2026-10-11):** Requesters can delete their own drafts and retract pending requisitions to Draft before an approver acts or Board resolution work starts. Deletion hides normal reads/documents while retaining audit evidence. Retraction preserves signed revisions; editing/resubmission requires a fresh signature and route. Version checks, transaction locking, actor-bound retry keys and audit rollback protect both actions. Migration 0018 adds the deletion marker. Verification is recorded in task_done.md.
+
 **Blocker:** Live Cloudinary credentials/account behavior and BNH signature-method acceptance remain deployment/acceptance checks, separate from local implementation verification.
 
 ### Requirement Basis

@@ -421,7 +421,7 @@ async def test_replacement_officeholder_cannot_inherit_assigned_request(
     await sign_in(client, people["staff"])
     detail = (await client.get(f"/api/v1/requisitions/{req['id']}")).json()
     assert "no longer holds" in detail["decision_blocker"]
-    assert detail["available_actions"] == []
+    assert detail["available_actions"] == ["retract"]
 
 
 async def test_inbox_navigation_uses_office_not_queue_or_admin_permissions(

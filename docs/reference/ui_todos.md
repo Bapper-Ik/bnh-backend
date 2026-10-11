@@ -322,3 +322,8 @@ Login now has an accessible Show/Hide password button and omits the requested in
 ## REQ-001 / VEN-001 — Account and form validation (2026-10-11)
 
 New requisition/vendor/company-bank writes require exactly ten ASCII digits for supplied account numbers, preserving leading zeroes. Bank fields remain all-or-none and may be explicitly unknown. Trusted vendor selection and submission validate the captured account too. Historical read/export schemas remain compatible; no signed record is rewritten. Browser validation enforces bank completeness and account length, price/quantity precision and date order, and opens collapsed invalid bank fields before focusing them. Incomplete drafts remain supported. Full backend suite: 374 passed; all eight dedicated bank checks also passed, including one additional legacy-selection regression. Eleven connected requisition/vendor/transfer browser journeys, six frontend unit tests, static/type/format checks, production build and both Docker builds pass. OpenAPI was regenerated and compared: no shape change. No migration or new setting.
+
+
+## REQ-002 — Delete drafts and retract pending requests (2026-10-11)
+
+Requester details expose Delete draft only in Draft, and Retract requisition only before an approver decision or Board resolution work. Confirmed retraction returns to Draft for editing and fresh signed resubmission. Both POST endpoints (`/requisitions/{id}/delete` and `/requisitions/{id}/retract`) accept expected_version and idempotency_key. Reload after conflicts; identical retries reuse the key. Deleted drafts disappear from normal lists, details and document access; internal history remains. Deploy migration 0018 via the existing Docker startup before the frontend. No new settings.

@@ -93,7 +93,13 @@ async def history_page(
         .where(
             AuditEvent.resource_id == req.id,
             AuditEvent.action.in_(
-                ["requisition.created", "requisition.updated", "requisition.revision_created"]
+                [
+                    "requisition.created",
+                    "requisition.updated",
+                    "requisition.revision_created",
+                    "requisition.deleted",
+                    "requisition.retracted",
+                ]
             ),
         )
     )

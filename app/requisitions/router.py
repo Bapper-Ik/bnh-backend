@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -17,6 +17,7 @@ from app.core.errors import DomainError
 from app.evidence.models import Attachment
 from app.evidence.storage import Storage
 from app.history.filters import RequestFilters
+from app.identity.schemas import Message
 from app.identity.service import Actor, current_actor
 from app.organisation.models import Department, Entity
 from app.organisation.service import membership
@@ -169,6 +170,8 @@ async def create(
         )
     )
     if existing:
+        if existing.deleted_at is not None:
+            raise DomainError("RESOURCE_NOT_AVAILABLE", "This draft has been deleted.", 404)
         if existing.creation_digest != digest:
             raise DomainError(
                 "IDEMPOTENCY_CONFLICT", "This creation key was used for different content."
@@ -212,6 +215,93 @@ async def detail(
     return (
         await revision_view(s, req, actor, revision) if revision else await present(s, req, actor)
     )
+
+
+async def manage_request(
+    request_id: UUID,
+    body: StartRevision,
+    actor: Actor,
+    s: AsyncSession,
+    action: Literal["delete", "retract"],
+) -> Message:
+    await key_lock(s, actor, body.idempotency_key)
+    req = await s.scalar(select(Requisition).where(Requisition.id == request_id).with_for_update())
+    if not req or req.requester_id != actor.id:
+        raise DomainError("RESOURCE_NOT_AVAILABLE", "Requisition not found.", 404)
+    if actor.account.read_only:
+        raise DomainError("ACCESS_DENIED", "Read-only accounts cannot change requisitions.", 403)
+    member = await membership(s, actor.id, req.entity_id)
+    if member.department_id != req.department_id:
+        raise DomainError("ACCESS_DENIED", "Your department no longer permits this action.", 403)
+    payload = content_digest(
+        {"operation": action, "request_id": str(req.id), "command": body.model_dump(mode="json")}
+    )
+    cached = await s.scalar(
+        select(CommandResult).where(
+            CommandResult.actor_id == actor.id,
+            CommandResult.idempotency_key == body.idempotency_key,
+        )
+    )
+    if cached:
+        if cached.payload_digest != payload:
+            raise DomainError("IDEMPOTENCY_CONFLICT", "This key was used for a different action.")
+        if action == "delete":
+            return Message.model_validate(cached.result)
+        if req.deleted_at is not None:
+            raise DomainError("RESOURCE_NOT_AVAILABLE", "Requisition not found.", 404)
+        return Message.model_validate(cached.result)
+    if req.deleted_at is not None:
+        raise DomainError("RESOURCE_NOT_AVAILABLE", "Requisition not found.", 404)
+    if req.version != body.expected_version:
+        raise DomainError("REVISION_CONFLICT", "This request changed. Reload before continuing.")
+    await require_action(s, req, actor, action)
+    if action == "delete":
+        req.deleted_at = datetime.now(UTC)
+    else:
+        req.state = "DRAFT"
+    req.version += 1
+    await record_event(
+        s,
+        action="requisition.deleted" if action == "delete" else "requisition.retracted",
+        actor_id=actor.id,
+        resource_id=req.id,
+        entity_id=req.entity_id,
+        details=AuditDetails(revision_id=req.current_revision_id),
+    )
+    # Finish this transaction before the client reloads the draft and its route.
+    # Route presentation locks office accounts; an approver may already hold
+    # their account lock while waiting for this requisition lock.
+    result = Message(message="Draft deleted." if action == "delete" else "Returned to Draft.")
+    s.add(
+        CommandResult(
+            actor_id=actor.id,
+            idempotency_key=body.idempotency_key,
+            payload_digest=payload,
+            resource_id=req.id,
+            result=result.model_dump(mode="json"),
+        )
+    )
+    return result
+
+
+@router.post("/{request_id}/delete", response_model=Message)
+async def delete_draft(
+    request_id: UUID,
+    body: StartRevision,
+    actor: Actor = Depends(current_actor),
+    s: AsyncSession = Depends(get_session, scope="function"),
+) -> Message:
+    return await manage_request(request_id, body, actor, s, "delete")
+
+
+@router.post("/{request_id}/retract", response_model=Message)
+async def retract_request(
+    request_id: UUID,
+    body: StartRevision,
+    actor: Actor = Depends(current_actor),
+    s: AsyncSession = Depends(get_session, scope="function"),
+) -> Message:
+    return await manage_request(request_id, body, actor, s, "retract")
 
 
 @router.post("/{request_id}/revisions", response_model=RequestView)

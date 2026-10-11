@@ -12,6 +12,7 @@ from app.core.database import Base, Record
 class Requisition(Record, Base):
     __tablename__ = "requisitions"
     __table_args__ = (UniqueConstraint("requester_id", "creation_key"),)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reference: Mapped[str] = mapped_column(unique=True)
     requester_id: Mapped[UUID] = mapped_column(
         ForeignKey("custodian.identities.id", ondelete="RESTRICT")
