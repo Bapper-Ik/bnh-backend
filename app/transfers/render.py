@@ -19,7 +19,6 @@ from reportlab.lib.enums import (  # type: ignore[import-untyped]
 from reportlab.lib.pagesizes import A4  # type: ignore[import-untyped]
 from reportlab.lib.styles import ParagraphStyle  # type: ignore[import-untyped]
 from reportlab.pdfbase import pdfmetrics  # type: ignore[import-untyped]
-from reportlab.pdfgen.canvas import Canvas  # type: ignore[import-untyped]
 from reportlab.platypus import (  # type: ignore[import-untyped]
     KeepTogether,
     Paragraph,
@@ -88,13 +87,6 @@ def render_transfer(
         leading=16,
         textColor=colors.HexColor("#1A1A1A"),
     )
-    footer_style = ParagraphStyle(
-        "TransferFooter",
-        fontName=fonts["footer"],
-        fontSize=8,
-        leading=10,
-        textColor=colors.HexColor("#8C8C8C"),
-    )
 
     def p(text: str, style: ParagraphStyle = left) -> Paragraph:
         text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\t", " ")
@@ -127,7 +119,7 @@ def render_transfer(
                 "PAYMENT INSTRUCTION",
                 ParagraphStyle("Subject", parent=heading, alignment=TA_CENTER),
             ),
-            p(f"Requisition: {snapshot.reference} | Revision {snapshot.revision}"),
+            p(f"Requisition: {snapshot.reference}"),
             Spacer(1, 10),
             p(
                 "Kindly take this as our instruction to transfer the total sum of "
@@ -172,7 +164,6 @@ def render_transfer(
                 drawing,
                 p(signer.name, heading),
                 p(ROLES.get(signer.label, signer.label)),
-                p("Signed electronically on " + date.strftime("%d %B %Y at %H:%M WAT")),
             ]
         )
     )
@@ -183,23 +174,10 @@ def render_transfer(
         leftMargin=MARGIN,
         rightMargin=MARGIN,
         topMargin=MARGIN,
-        bottomMargin=MARGIN + 24,
+        bottomMargin=MARGIN,
         title=f"{snapshot.reference} - bank transfer request",
         author=snapshot.company,
     )
 
-    def footer(canvas: Canvas, document: SimpleDocTemplate) -> None:
-        canvas.saveState()
-        canvas.setStrokeColor(colors.HexColor("#D9D9D9"))
-        canvas.line(MARGIN, 52, A4[0] - MARGIN, 52)
-        note = p(
-            f"{snapshot.reference} / revision {snapshot.revision}\n"
-            f"Page {document.page} | This instruction does not confirm that payment has been made.",
-            footer_style,
-        )
-        note.wrap(A4[0] - 2 * MARGIN, 30)
-        note.drawOn(canvas, MARGIN, 25)
-        canvas.restoreState()
-
-    doc.build(story, onFirstPage=footer, onLaterPages=footer)
+    doc.build(story)
     return buffer.getvalue(), "reportlab-" + reportlab.Version, version

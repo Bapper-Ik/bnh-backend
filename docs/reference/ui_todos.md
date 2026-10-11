@@ -302,3 +302,8 @@ Vendor lists now show `Recorded` when full detail access is permitted, retaining
 Selecting a vendor created by another staff member keeps the ordinary requester's bank view restricted, while approval signing resolves that exact captured vendor version's beneficiary. `transfer_details` on the existing individual/Chairman challenge shows those complete values and binds them to the approval signature. No API schema change. The form explains the hidden bank account's use; Documents offers **Download transfer letter** as soon as the automatic export is ready, using authenticated `GET /api/v1/exports/{id}/content` and displaying failures instead of downloading error responses. The existing viewer/download remains available.
 
 Deploy backend and frontend from `dev`; no migration or new settings. Saved drafts/pending approvals retain their original vendor version. Already failed letters from incomplete historic approvals are not silently regenerated with unsigned details. Company debit-account configuration and functioning private storage remain required. Verification results are recorded in `task_done.md`.
+
+
+## DOC-002 — Simplified payment-letter print layout
+
+Backend-only PDF correction: print the requisition reference without its revision suffix; omit the electronic-signing timestamp and the repeated-reference/page/payment-disclaimer footer. Existing requester preview and download controls need no changes. Deploy the backend; newly generated letters use the clean layout. Ready stored PDFs are not rewritten, and signature/revision evidence remains internal. No migration or new environment settings.

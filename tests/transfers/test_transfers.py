@@ -106,6 +106,11 @@ async def test_approval_queues_once_with_exact_signature_and_frozen_bank_data(
     text = "\n".join(p.extract_text() for p in pdf.pages)
     assert len(pdf.pages) == 1
     assert "PAYMENT INSTRUCTION" in text and "248,000.15" in text
+    assert text.count(req["reference"]) == 1
+    assert "revision" not in text.lower()
+    assert "Signed electronically" not in text
+    assert "This instruction does not confirm" not in text
+    assert "Page 1" not in text
     assert "0001234567" in text and "9999999999" not in text
     assert "Synthetic hod" in text and "Head of Department" in text
     assert "Synthetic staff" not in text

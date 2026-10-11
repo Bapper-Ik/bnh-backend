@@ -1934,6 +1934,10 @@ Owner request (2026-10-11), `transfer-request.jpeg`, and explicit instruction to
 - Missing bank data is disclosed before approval and stored as an unavailable letter with an explicit reason. It is never repaired using later unsigned data. Font/storage failure does not undo approval; retries preserve the original capture.
 - The requester views/downloads the private letter in the existing document viewer and prints the PDF through a PDF reader. Oversight permissions alone do not grant bank-letter download access.
 
+### Payment letter simplification (2026-10-11)
+
+The owner's template correction removes the revision suffix from the printed requisition reference, the electronic-signing timestamp line, and the entire repeated-reference/page/payment-disclaimer footer. Retain the ordinary letter date, payment instructions, beneficiary details, drawn approval signature, signer name and office. Internal revision/signature/approval records remain unchanged; previously generated private files retain their existing bytes. The revised one-page letter was rendered and visually inspected. All 367 backend tests, Ruff check/format, mypy, three connected document browser journeys and the backend Docker build passed.
+
 ### Shared vendor and requester download correction (2026-10-11)
 
 Vendor-directory redaction no longer prevents a complete transfer instruction. For a restricted selected vendor, the server resolves the beneficiary from the exact immutable vendor version captured by the submitted revision, scoped to the same company and vendor. It never uses the latest master account. The individual approver or confirming Chairman reviews and signs these exact beneficiary details in the existing transfer ceremony. Requester-facing requisition/vendor views stay redacted, while the requester can download the resulting approved bank letter through the existing private export endpoint.

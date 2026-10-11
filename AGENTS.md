@@ -153,6 +153,8 @@ Use `../docs/pdf-template.jpeg` as the requisition PDF layout reference: compact
 
 The owner subsequently removed internal audit metadata from user PDFs: do not print hashes, signature/export UUIDs or a verification appendix. Retain audit and integrity data in the system. Additional pages should contain only necessary business details (supporting filenames, long declarations, decision reasons and authorised Board records).
 
+The owner also requires a simple payment-letter layout: no revision suffix on the printed requisition ID, no electronic-signing timestamp line, and no repeated-reference/page/payment-disclaimer footer. Retain the ordinary letter date, payment data, drawn signature, signer name and office; keep revision/signing metadata internal.
+
 ## Vendor bank visibility — confirmed owner policy
 
 Ordinary staff retain full details for vendors they created. For other vendors, bank details remain restricted unless separately granted `vendor:read_sensitive`. Current eligible HOD, Chief of Staff, MD, Company Secretary and Board Chairman appointments grant bank-detail reads within their existing company scope. Full system administrators receive bank-detail visibility throughout their existing oversight scope, including bank values already captured on requisitions. Read-only reviewers remain restricted.
