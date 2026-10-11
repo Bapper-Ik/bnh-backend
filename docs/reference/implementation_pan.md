@@ -294,6 +294,7 @@ The groups below are implementation work areas inside the one Custodian system, 
 | 15    | HIS-001    | Requisition Timeline, Decision History, and Authorised Search           |
 | 16    | NOT-001    | In-App Work Items, Basic Email Delivery, and Safe Retries               |
 | 17    | DOC-001    | Version-Specific Requisition Document and Approval Record Export        |
+| 17a   | DOC-002    | Signed Bank Transfer Request on Final Approval                          |
 | 18    | WEB-001    | Greyscale Application Shell, Sign-In, and Restricted Administration     |
 | 19    | WEB-002    | Requester Dashboard, Requisition Form, Signing, and History             |
 | 20    | WEB-003    | Individual Approver, Secretary, Chairman, and Reviewer Workspaces       |
@@ -1835,11 +1836,11 @@ Produce a downloadable PDF or the repository-supported equivalent PDF-rendering 
 
 ### Implementation Status
 
-**Status:** In Progress
+**Status:** Implemented
 
-**Implementation Evidence:** Implemented in the working tree: immutable revision/draft capture, persistent private PDF jobs, idempotent creation, leases/retries, current bank/Board authorisation, actual signatures/outcomes/timestamps, and screen 7 generation/list/view/download controls. Verification passed 293 PostgreSQL-backed backend tests, six frontend unit tests, 33 real-backend browser journeys, lint/format/type/build checks and backend Docker build/runtime checks. Synthetic-font PDF inspection covered drafts, Board signature records and long cost tables; these are not exact-font acceptance. The owner retained the exact Garamond, Arial and Baskerville Old Face fonts and will arrange licensed server copies. Private font configuration is required; no fallback or redistributed proprietary font files will be shipped.
+**Implementation Evidence:** Version-specific frozen export captures, persistent jobs with leases/retries, current bank/Board authorisation, actual signatures/outcomes/timestamps and screen 7 generation/list/view/download are implemented. The owner now explicitly approves bundled free fonts and requests that this feature be pushed with the signed-transfer work. Liberation Serif Regular and Liberation Sans Bold (SIL Open Font License 1.1) ship inside the backend image and are embedded in the PDFs. No private font files, font environment variables or runtime downloads are needed. Focused export/transfer tests and visual inspection of a seven-page requisition/Board record and signed letter passed with these exact bundled files; the final release gate passed: 334 PostgreSQL backend tests (including clean migration checks), six frontend unit tests, all 45 connected browser journeys, Ruff check/format, mypy, frontend lint/format/typecheck and the production build. Both Docker images build; the backend image renders both PDF types with networking disabled, and the frontend image serves a successful health response.
 
-**Blocker:** Licensed server copies of Garamond regular, Arial Bold and Baskerville Old Face regular are not supplied yet. Exact-font visual acceptance and a live private Cloudinary PDF round trip remain unverified. Synthetic test fonts validate mechanics only; the feature stays In Progress. The owner subsequently prioritised only Dashboard and My Account & Security while licensed fonts are pending; backup/recovery and broader release work are deferred.
+**Deployment verification:** Live private Cloudinary upload/download and genuine staff acceptance remain post-deployment checks. They are not prerequisites for the owner-authorised development push. Local verification does not claim those live results.
 
 ### Requirement Basis
 
@@ -1867,8 +1868,8 @@ Request UUID/revision; template version; authorised projection; immutable financ
 
 ### Business Rules and Validations
 
-- Use A4 and 0.60-inch margins. Body: Garamond 11 pt, justified, #595959. H1: Arial 16 pt bold, #000000. H2: Arial 12 pt bold, #1A1A1A. Footer: Baskerville Old Face 8 pt, #8C8C8C.
-- Confirm authorised font availability. No silent font substitutions or distribution of font files. Record any BNH-approved alternative.
+- Use A4 and 0.60-inch margins. Body: Liberation Serif Regular 11 pt, justified, #595959. H1: Liberation Sans Bold 16 pt, #000000. H2: Liberation Sans Bold 12 pt, #1A1A1A. Footer: Liberation Serif Regular 8 pt, #8C8C8C. This replaces the original proprietary-font requirement by the owner’s 2026-10-11 decision.
+- Bundle the approved Liberation font binaries and licence notice. Verify loading/embedding in the production image and use the same fonts for tests. Missing/corrupt bundled assets fail explicitly.
 - Replace the old approval path with actual generated history. No empty Finance or Accounts signature boxes.
 - Display Draft/Rejected/Deferred/Conditional/Approved truthfully; Approved never becomes Paid.
 - Use the signature evidence for the exact signed revision, not a current profile signature copied onto old records.
@@ -1897,9 +1898,57 @@ A private, accurate, properly formatted record can be generated from the stored 
 
 - [x] Export totals, reference, revision, declarations, and decision outcomes match stored values.
 - [x] No legacy approval rows or blue visual styling remain.
-- [ ] Long descriptions, multiple pages, table headers, footers, and signature blocks render without clipping. Synthetic-font mechanics passed; repeat visual acceptance with the licensed exact fonts before closing this criterion.
+- [x] Long descriptions, multiple pages, table headers, footers and signature blocks render without clipping with the approved bundled fonts; actual production-font PDF pages were inspected.
 - [x] A requester cannot use export to obtain a restricted Board attachment or unapproved sensitive fields.
 - [x] Re-export does not mutate signatures or rewrite the historical approval timestamp.
+
+---
+
+
+## Feature ID: DOC-002
+
+### Feature Name
+
+Signed Bank Transfer Request on Final Approval
+
+**Status:** Implemented — local verification complete; development publication includes DOC-001 and DOC-002 as explicitly requested.
+
+### Requirement Basis and Scope
+
+Owner request (2026-10-11), `transfer-request.jpeg`, and explicit instruction to use the approver's signature captured while approving. Reuse screens 7 (documents/signing), 8/9 (existing approvals), and 12 (company bank drawer). No payment execution or new approval route. DOC-001’s private export foundation is a prerequisite. The owner explicitly requests publication of both document features with bundled free fonts.
+
+### Workflow and Rules
+
+- An organisation administrator configures one versioned company debit account, bank branch and optional company address. This one-account design is the stated assumption pending any future multiple-account requirement.
+- Requesters capture beneficiary bank, account name and account number on the requisition. Account numbers retain leading zeroes.
+- Before approving, the individual approver or confirming Chairman reviews exact amount and both accounts, and explicitly consents to the use of this signature on the transfer letter. Company profile changes invalidate stale challenges.
+- Unconditional approval stores one immutable transfer export per revision in the same transaction, owned by the requester. The actual recorded approval/Chairman signature, name, role and approval timestamp are reused; never copy a profile/requester/Secretary signature.
+- Board conditions, deferment, rejection and Secretary submission create no letter. Older approvals are not retroactively signed. Existing signed letters survive master-data edits unchanged.
+- The A4 letter contains company identity/address, source bank/branch, total in figures and words, debit and beneficiary accounts, revision reference and drawn approval signature. A letter is an instruction, not proof of payment.
+- Missing bank data is disclosed before approval and stored as an unavailable letter with an explicit reason. It is never repaired using later unsigned data. Font/storage failure does not undo approval; retries preserve the original capture.
+- The requester views/downloads the private letter in the existing document viewer and prints the PDF through a PDF reader. Oversight permissions alone do not grant bank-letter download access.
+
+### API and Migration
+
+Migration `0017` follows `0016`. `GET/PUT /api/v1/organisation/entities/{id}/debit-account` uses expected versions and organisation management permission. Signing challenges add optional `transfer_details`; export metadata adds `document_type=bank_transfer`. Existing scoped exports/content/retry endpoints serve the letter. Audit events: `organisation.debit_account.updated`, `requisition.transfer.queued`, and the existing export success/failure events. No new provider or database URL is required.
+
+### Verification Evidence
+
+Final free-font release passed **334 backend tests**, **six frontend unit tests**, **all 45 connected Playwright journeys**, Ruff check/format, mypy, frontend lint/format/typecheck and production build. Tests use the production Liberation font binaries and isolated loopback PostgreSQL/storage. Clean migration, idempotency, permission, Board outcome, missing/corrupt font, retry, exact amount and captured-signature checks pass. Both Docker images build; the backend renders requisition and transfer PDFs as its non-root runtime user without network access, and the frontend health check returns 200. A seven-page requisition/Board PDF and signed transfer letter were rendered and every page inspected for layout defects.
+
+The owner superseded the proprietary-font requirement with bundled free fonts and explicitly requested publication of both document features. No private font configuration is needed. Deployment must apply migrations 0016–0017 (already included in startup) and retain existing private Cloudinary credentials. Live provider and genuine staff verification remain separately tracked post-deployment checks; no live records or signatures were created by the tests.
+
+### Acceptance Criteria
+
+- [x] Final approval atomically creates one requester-owned job containing the exact bank snapshot and actual approver signature; replay creates no duplicate.
+- [x] Account changes invalidate stale signing and do not change existing signed letters; leading zeroes and kobo remain exact.
+- [x] Board outcome, access control, missing-data, render failure and retry checks pass against real PostgreSQL.
+- [x] Connected browser setup → submission → approval → requester download works with responsive signing/settings/documents.
+- [x] The approved bundled-font transfer letter renders correctly, embeds its fonts and includes the captured signature; PDF and Docker runtime checks pass.
+
+### Post-deployment checks
+
+- [ ] Confirm a live private Cloudinary transfer-letter upload/download with a genuine authorised request. Local tests use isolated storage; this check does not block the authorised dev push.
 
 ---
 
@@ -1935,6 +1984,10 @@ Build the shared navigation, sign-in/session experience, and minimum permitted o
 **Implementation Evidence:** Shared grayscale shell and connected account screens 1–3 are implemented: sign-in, generic forgot-password requests, shared activation/reset, expired/replayed links, password matching, session revocation, safe outage retry and desktop/mobile layout. Five real-backend browser journeys include account access and vendor regression. Isolated frontend lint, formatting, typecheck (zero errors/warnings), three unit tests, build and all five browser journeys passed. Desktop reset and narrow activation layouts were visually inspected. Staff & Access Management (11) now includes protected directory/search, invitation and detail drawers, account status/session controls, department membership and controlled appointment assignment/revocation. Optimistic versions preserve stale edits; self-status/authority changes are blocked and Secretary/Chairman separation is retained. Screen 11 verification: all 182 working backend tests and 113 exact staged release tests passed, including eight new staff cases; staged Ruff, formatting and mypy passed. Exact frontend ESLint, Prettier, typecheck (zero errors/warnings), three unit tests, production build and nine real-backend browser journeys passed. Desktop and mobile list/drawer layouts were inspected. Organisation & Authority (12) is implemented with company/department drawers, versioned updates and enable/disable confirmations, named officeholder status/history and missing/conflicting assignment visibility, and a read-only approval matrix. Screen 12 verification: the exact release passed Ruff, formatting, mypy, all 120 backend tests, frontend ESLint/Prettier/typecheck, three unit tests, production build and all twelve PostgreSQL-backed browser journeys. Full working-source regression in a fresh isolated database passed 189 tests. Desktop and narrow layouts were visually inspected. Screens 1–3, 11 and 12 complete the scoped account-access and restricted-administration journey.
 
 **My Account & Security follow-up (screen 14):** The shared `/account` page exposes personal details, password change, and individual/other/all-session sign-out with confirmations. Department and authority remain administrator-managed. Desktop/390px layouts were inspected. The final gate passed **290 backend tests**, **6 unit tests** and **36 real-backend browser journeys**, plus all configured lint/format/types/build checks. Delivered in focused IAM-001/WEB-001 commits on origin/dev.
+
+**Mobile workspace follow-up (2026-10-09):** Implemented. The mobile shell uses a compact sticky header, an accessible off-canvas role-aware navigation drawer and a controlled account dropdown. Notification controls remain reachable at phone widths; desktop navigation remains available. Drawer focus, dismissal, route selection and resizing, long account identities, sign-out failure/retry and notifications are covered. All 41 connected browser tests, six unit tests, lint/format/type checks (zero errors/warnings), production build and five isolated PostgreSQL migration checks pass. Header bounds were checked from 320 through 1280px; desktop/mobile screenshots were inspected. Initial accessibility, disclosure timing and test synchronization findings were resolved before the complete successful rerun. No backend, migration or environment change is required. Frontend publication uses a focused WEB-001 commit on origin/dev; live deployment is separate.
+
+**Responsive page-content follow-up (2026-10-09; screens 1–14 / WEB-001–003):** The owner requested responsive screen contents beyond the shared shell. Labelled narrow-screen record cards, container-aware forms/totals/actions, dashboard/account panels and administration/signing/Board drawers are implemented. Populated real-backend checks cover 320–1440px, internal overflow and mobile edit persistence. Initial findings were fixed; the final full gate passed all 43 connected browser journeys, six unit tests, lint/format/type checks (zero errors/warnings), production build and five isolated migration checks. Phone/desktop screenshots were visually inspected. Frontend publication is verified on `origin/dev` at `aff8fb1`; live deployment remains separate. Existing PDF work is excluded and preserved. No backend, migration or environment change is required.
 
 **Deployment / acceptance:** The owner reports email working after enabling it in Render. Screen 12 uses the existing Dockerfiles and startup migrations with no new environment variables or migration. Its deployed operation must be checked after the feature push; genuine staff acceptance remains separate from synthetic browser verification.
 

@@ -213,6 +213,7 @@ if __name__ == "__main__":
         path.chmod(0o600)
         return uuid4()
 
+    # Browser checks use the same bundled PDF fonts as production.
     app = create_app(config)
     app.state.notification_sender = capture_notification
     app.state.account_email_sender = capture_mail

@@ -116,7 +116,7 @@ async def search_events(s: AsyncSession, actor: Actor, filters: AuditFilters) ->
                 and_(
                     AuditEvent.resource_id == Requisition.id,
                     AuditEvent.details["resource_type"].astext.in_(
-                        ["requisition", "board", "signature", "notification"]
+                        ["requisition", "board", "signature", "notification", "export"]
                     ),
                 ),
                 Requisition.id == Attachment.requisition_id,

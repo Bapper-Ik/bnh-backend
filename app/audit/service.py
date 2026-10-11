@@ -44,6 +44,8 @@ register_events(
     "auth.email_cancelled",
     "organisation.created",
     "organisation.updated",
+    "organisation.debit_account.updated",
+    "requisition.transfer.queued",
     "office.assignment_failed",
     "office.assigned",
     "office.revoked",
@@ -75,6 +77,9 @@ register_events(
     "board.returned",
     "requisition.history_view.success",
     "requisition.history_view.failure",
+    "requisition.export.queued",
+    "requisition.export.success",
+    "requisition.export.failure",
     "notification.create.success",
     "notification.delivery.success",
     "notification.delivery.failure",
@@ -92,6 +97,7 @@ class AuditDetails(BaseModel):
     """Identifiers/enums only: no arbitrary bank, password or signature values."""
 
     model_config = ConfigDict(extra="forbid")
+    export_id: UUID | None = None
     notification_id: UUID | None = None
     revision_id: UUID | None = None
     resolution_id: UUID | None = None
@@ -104,6 +110,7 @@ class AuditDetails(BaseModel):
     content_digest: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     resource_type: (
         Literal[
+            "export",
             "notification",
             "identity",
             "auth",

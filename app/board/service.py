@@ -262,7 +262,15 @@ async def bound_intent(
         raise DomainError(
             "REVISION_CONFLICT", "The requisition no longer matches its signed revision."
         )
-    bound = {
+    transfer = None
+    declaration = STATEMENTS[body.action]
+    if body.action == "board_confirm" and data.outcome == "APPROVE":
+        from app.transfers.service import TRANSFER_CONSENT, details
+
+        transfer = (await details(s, req)).model_dump(mode="json")
+        declaration += " " + TRANSFER_CONSENT
+    bound: dict[str, object] = {
+        "transfer": transfer,
         "request_id": str(req.id),
         "revision_id": str(rev.id),
         "revision_digest": rev.content_digest,
@@ -282,7 +290,7 @@ async def bound_intent(
             "digest": evidence.digest,
             "object_version": evidence.object_version,
         },
-        "declaration": STATEMENTS[body.action],
-        "declaration_version": "board-v1",
+        "declaration": declaration,
+        "declaration_version": "board-transfer-v1" if transfer is not None else "board-v1",
     }
     return record, evidence, bound

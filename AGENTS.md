@@ -98,6 +98,8 @@ Board cases require an actual meeting resolution. The Company Secretary records 
 
 ## Authentication, authorisation, and evidence
 
+The owner replaced the proprietary-font requirement with bundled free fonts (2026-10-11). Use Liberation Serif Regular for document bodies/footers and Liberation Sans Bold for headings, with their SIL Open Font License notice. Include the font binaries in the backend image and use the same files in tests; no private font copies, Render font secrets or runtime download are required. Keep PDF layout/signatures and A4 sizing consistent.
+
 The owner selected the existing Cloudinary account for supporting documents (2026-10-08). Use authenticated raw assets and application-authorised downloads; credentials stay on the backend. No R2, Backblaze or scanner provisioning is part of this release.
 
 
@@ -138,3 +140,9 @@ Administrative oversight grants read access to request lists/details/status/hist
 - Use real PostgreSQL integration for transactions, migrations, runtime privileges, audit immutability, and races; SQLite/mocks do not prove these guarantees. Cover Board outcomes, corrections, and Secretary/Chairman separation.
 - Once configured, checks are `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy app`, and `uv run pytest`. Document integration prerequisites; skipped/unavailable integration is not a pass.
 - Three genuine staff-operated resolved requisitions are a human acceptance gate. Never fabricate records, impersonate staff, or count fixtures toward it.
+
+## Signed bank transfer letters (owner request, 2026-10-11)
+
+The owner explicitly authorises a bank transfer letter using the signature captured in the same approval ceremony. This extends the existing document viewer and Organisation & Authority settings, not payment execution. Bind the configured company debit account, beneficiary account and amount into the fresh approval challenge; show them and the transfer-signature consent before signing. Use the actual individual approver's signature or the Chairman's confirmation signature for an unconditional Board approval. Never use a profile signature, requester signature, Secretary signature or historic signature without that consent. Conditional/rejected/deferred requests produce no transfer letter.
+
+The implementation assumes one administrator-configured debit account per company. Account numbers remain strings. Freeze the approved bank data and signature; later master-data edits do not rewrite letters. Missing bank details are visible before signing and prevent a complete letter, without reversing an otherwise valid approval. Do not add unsigned details to a frozen letter or retroactively create letters for older approvals. Font/storage failures remain explicit and retryable from the same capture. Requesters retrieve their own private letters; administrative oversight alone grants no download access. DOC-002 depends on the DOC-001 export foundation. The owner explicitly requested both pending document features be pushed with the free-font change after local checks pass. Live Cloudinary verification and staff acceptance remain separately reported deployment checks; they do not block this development push.

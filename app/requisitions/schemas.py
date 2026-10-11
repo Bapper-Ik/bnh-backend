@@ -7,6 +7,7 @@ from pydantic import BaseModel, EmailStr, Field, TypeAdapter, field_validator, m
 from app.authority.policy import calculate_lines, exact_decimal
 from app.history.schemas import NextAction
 from app.identity.schemas import Command
+from app.transfers.schemas import TransferDetails
 
 
 class CostLine(Command):
@@ -122,6 +123,7 @@ class SignedAction(Intent):
 
 
 class ChallengeView(BaseModel):
+    transfer_details: TransferDetails | None = None
     id: UUID
     content_digest: str
     expires_at: str

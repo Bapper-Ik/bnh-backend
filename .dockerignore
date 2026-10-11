@@ -14,3 +14,12 @@ tests
 docs
 AGENTS.md
 README.md
+
+# Ignore arbitrary local fonts; include only the approved bundled font files
+*.ttf
+*.ttf.b64
+*.otf
+*.otf.b64
+
+!app/assets/fonts/LiberationSerif-Regular.ttf
+!app/assets/fonts/LiberationSans-Bold.ttf

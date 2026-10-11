@@ -31,7 +31,6 @@ from app.requisitions.schemas import (
     UpdateRequest,
 )
 from app.requisitions.service import (
-    DECLARATION,
     authorise_intent,
     content_digest,
     present,
@@ -364,8 +363,9 @@ async def challenge(
         total=format(req.total, ".2f"),
         authority=str(route["authority"]) if body.action == "submit" else None,
         routing_explanation=str(route["explanation"]) if body.action == "submit" else None,
-        statement=DECLARATION
-        if body.action == "submit"
+        transfer_details=bound.get("transfer"),
+        statement=str(bound["declaration"])
+        if body.action in {"submit", "approve"}
         else f"I have reviewed this exact requisition and confirm my decision to {body.action}.",
     )
 
@@ -541,6 +541,19 @@ async def act(
         }[body.action]
     req.version += 1
     await s.flush()
+    if body.action == "approve":
+        from app.transfers.schemas import TransferDetails
+        from app.transfers.service import enqueue as enqueue_transfer
+
+        route = bound["route"]
+        assert isinstance(route, dict)
+        await enqueue_transfer(
+            s,
+            req,
+            TransferDetails.model_validate(bound["transfer"]),
+            signature,
+            str(route["authority"]),
+        )
     audit = await record_event(
         s,
         action=event,

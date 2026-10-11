@@ -16,7 +16,6 @@ from app.board.schemas import BoardCase, BoardIntent, BoardSignedAction, SaveRes
 from app.board.service import (
     HOLDS,
     OUTCOMES,
-    STATEMENTS,
     available,
     board_access,
     bound_intent,
@@ -265,7 +264,8 @@ async def challenge(
         id=signing.id,
         content_digest=signing.content_digest,
         expires_at=expires.isoformat(),
-        statement=STATEMENTS[body.action],
+        statement=str(bound["declaration"]),
+        transfer_details=bound.get("transfer"),
         total=format(req.total, ".2f"),
         authority="board",
         routing_explanation=f"Resolution {row.number}: {row.data['outcome']}",
@@ -328,7 +328,7 @@ async def act(
         "content_digest": signing.content_digest,
         "authenticated_at": actor.login_session.authenticated_at.isoformat(),
         "declaration": bound["declaration"],
-        "declaration_version": "board-v1",
+        "declaration_version": bound["declaration_version"],
         "strokes": [[p.model_dump() for p in stroke] for stroke in body.strokes],
     }
     signing.consumed = True
@@ -360,6 +360,13 @@ async def act(
             action = "board.returned"
     req.version += 1
     await s.flush()
+    if body.action == "board_confirm" and req.state == "APPROVED":
+        from app.transfers.schemas import TransferDetails
+        from app.transfers.service import enqueue as enqueue_transfer
+
+        await enqueue_transfer(
+            s, req, TransferDetails.model_validate(bound["transfer"]), signature, "Board Chairman"
+        )
     audit = await record_event(
         s,
         action=action,

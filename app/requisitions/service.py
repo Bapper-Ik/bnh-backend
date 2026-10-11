@@ -150,7 +150,18 @@ async def authorise_intent(
     entity = await s.get(Entity, req.entity_id)
     department = await s.get(Department, req.department_id)
     assert entity and department
+    transfer = None
+    declaration = DECLARATION if intent.action == "submit" else intent.action
+    if intent.action == "approve":
+        from app.transfers.service import TRANSFER_CONSENT, details
+
+        transfer = (await details(s, req)).model_dump(mode="json")
+        declaration = (
+            "I have reviewed this exact requisition and confirm my decision to approve. "
+            + TRANSFER_CONSENT
+        )
     return {
+        "transfer": transfer,
         "entity_name": entity.name,
         "department_name": department.name,
         "entity_id": str(req.entity_id),
@@ -167,8 +178,12 @@ async def authorise_intent(
         "requester_name": requester_name,
         "context": req.context,
         "attachments": await attachment_manifest(s, req),
-        "declaration": DECLARATION if intent.action == "submit" else intent.action,
-        "declaration_version": DECLARATION_VERSION if intent.action == "submit" else "decision-v1",
+        "declaration": declaration,
+        "declaration_version": DECLARATION_VERSION
+        if intent.action == "submit"
+        else "decision-transfer-v1"
+        if intent.action == "approve"
+        else "decision-v1",
     }
 
 

@@ -17,5 +17,6 @@ COPY --chown=custodian:custodian scripts ./scripts
 COPY --chown=custodian:custodian alembic.ini ./
 RUN chmod +x /app/scripts/start.sh
 USER custodian
+RUN python -c "from app.exports.render import load_fonts, font_directory; load_fonts(font_directory())"
 EXPOSE 10000
 CMD ["/app/scripts/start.sh"]

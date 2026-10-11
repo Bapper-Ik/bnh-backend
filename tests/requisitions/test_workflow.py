@@ -118,6 +118,7 @@ async def signed(client, req, person, action, reason=""):
 async def client(settings):
     app = create_app(settings)
     app.state.notification_worker = False
+    app.state.export_worker = False
     async with app.router.lifespan_context(app):
         async with AsyncClient(
             transport=ASGITransport(app),

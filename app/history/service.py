@@ -200,6 +200,26 @@ async def history_page(
             .where(*rev_filter, ChairmanDecision.action == "board_return")
         )
         queries.append(returns)
+    from app.exports.models import Export
+
+    exports = (
+        select(
+            Export.generated_at,
+            literal("export:") + cast(Export.id, String),
+            payload(
+                type="requisition.export.success",
+                at=Export.generated_at,
+                actor=Identity.display_name,
+                actor_id=Export.requested_by,
+                revision=func.nullif(Export.revision_number, 0),
+            ),
+        )
+        .join(Identity, Identity.id == Export.requested_by)
+        .where(Export.requisition_id == req.id, Export.status == "ready")
+    )
+    if revision is not None:
+        exports = exports.where(Export.revision_number == revision)
+    queries.append(exports)
     events = union_all(*queries).subquery()
     count = await s.scalar(select(func.count()).select_from(events))
     rows = (

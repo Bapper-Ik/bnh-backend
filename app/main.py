@@ -13,11 +13,16 @@ from app.core.errors import DomainError
 from app.dashboard.router import router as dashboard_router
 from app.evidence.router import router as evidence_router
 from app.evidence.storage import CloudinaryStorage
+from app.exports.render import available as export_fonts_available
+from app.exports.render import render as export_renderer
+from app.exports.router import router as exports_router
+from app.exports.worker import export_loop
 from app.history.router import router as history_router
 from app.notifications.delivery import delivery_loop, send_resend
 from app.notifications.router import router as notifications_router
 from app.requisitions.router import approvals_router
 from app.requisitions.router import router as requisitions_router
+from app.transfers.router import router as transfers_router
 from app.vendor_app import create_app as create_runtime
 
 
@@ -32,6 +37,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(history_router)
     app.include_router(audit_router)
     app.include_router(notifications_router)
+    app.include_router(exports_router)
+    app.include_router(transfers_router)
+    app.state.export_worker = True
+    app.state.export_fonts_available = export_fonts_available
+    app.state.export_renderer = export_renderer
     app.state.notification_sender = send_resend
     app.state.notification_worker = True
     original_lifespan = app.router.lifespan_context
@@ -48,9 +58,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         application.state.notification_sender,
                     )
                 )
+            export_worker = None
+            if application.state.export_worker:
+                export_worker = asyncio.create_task(
+                    export_loop(
+                        application.state.sessions,
+                        application.state.settings,
+                        application.state.evidence_storage,
+                        application.state.export_renderer,
+                    )
+                )
             try:
                 yield
             finally:
+                if export_worker:
+                    export_worker.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await export_worker
                 if worker:
                     worker.cancel()
                     with suppress(asyncio.CancelledError):
